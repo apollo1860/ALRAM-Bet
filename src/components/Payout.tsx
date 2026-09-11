@@ -39,7 +39,7 @@ export function Payout() {
         größeren Anteil vom echten eingezahlten Geld. Auszahlungen sind ganze Zahlen und summieren sich exakt auf
         den Gesamttopf.
       </p>
-      <table className="table">
+      <table className="table stack">
         <thead>
           <tr>
             <th>Spieler</th>
@@ -52,11 +52,11 @@ export function Payout() {
         <tbody>
           {sortedRows.map((row) => (
             <tr key={row.playerId}>
-              <td>{playerName(players, row.playerId)}</td>
-              <td>{fmtCoins(row.deposited)}</td>
-              <td>{fmtCoins(row.finalCoins)}</td>
-              <td>{row.sharePercent.toFixed(1)}%</td>
-              <td>
+              <td data-label="Spieler">{playerName(players, row.playerId)}</td>
+              <td data-label="Eingezahlt">{fmtCoins(row.deposited)}</td>
+              <td data-label="Coins am Ende">{fmtCoins(row.finalCoins)}</td>
+              <td data-label="Anteil">{row.sharePercent.toFixed(1)}%</td>
+              <td data-label="Auszahlung">
                 <strong>{fmtCoins(row.payout)}</strong>
               </td>
             </tr>
@@ -65,7 +65,7 @@ export function Payout() {
         <tfoot>
           <tr>
             <td colSpan={4}>Summe Auszahlungen</td>
-            <td>
+            <td data-label="Gesamt">
               <strong>{fmtCoins(sumPayout)}</strong>
             </td>
           </tr>

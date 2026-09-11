@@ -11,13 +11,13 @@ import { ADMIN_ID } from './lib/format';
 
 type Tab = 'setup' | 'group' | 'knockout' | 'betting' | 'wallet' | 'payout';
 
-const TABS: { id: Tab; label: string }[] = [
-  { id: 'setup', label: 'Setup' },
-  { id: 'group', label: 'Gruppenphase' },
-  { id: 'knockout', label: 'K.O.-Runde' },
-  { id: 'betting', label: 'Wetten' },
-  { id: 'wallet', label: 'Mein Konto' },
-  { id: 'payout', label: 'Abrechnung' },
+const TABS: { id: Tab; label: string; icon: string }[] = [
+  { id: 'setup', label: 'Setup', icon: '⚙️' },
+  { id: 'group', label: 'Gruppe', icon: '📋' },
+  { id: 'knockout', label: 'K.O.', icon: '🏆' },
+  { id: 'betting', label: 'Wetten', icon: '💰' },
+  { id: 'wallet', label: 'Konto', icon: '👤' },
+  { id: 'payout', label: 'Abrechnung', icon: '🧾' },
 ];
 
 function App() {
@@ -29,17 +29,9 @@ function App() {
   return (
     <div className="app">
       <header>
-        <h1>🏓 ALRAM Bet</h1>
+        <span className="brand">🏓 ALRAM Bet</span>
         <PlayerSwitcher />
       </header>
-
-      <nav className="tabs">
-        {TABS.map((t) => (
-          <button key={t.id} className={tab === t.id ? 'active' : ''} onClick={() => setTab(t.id)}>
-            {t.label}
-          </button>
-        ))}
-      </nav>
 
       <main>
         {tab === 'setup' && <Setup />}
@@ -49,6 +41,15 @@ function App() {
         {tab === 'wallet' && <Wallet playerId={bettorId} />}
         {tab === 'payout' && <Payout />}
       </main>
+
+      <nav className="tabs">
+        {TABS.map((t) => (
+          <button key={t.id} className={tab === t.id ? 'active' : ''} onClick={() => setTab(t.id)}>
+            <span className="tab-icon">{t.icon}</span>
+            {t.label}
+          </button>
+        ))}
+      </nav>
     </div>
   );
 }

@@ -21,7 +21,7 @@ export function Setup() {
         einzelne Spiele berechnet (wer ist Favorit gegen wen) – die Stärke passt sich danach automatisch an
         Sieg/Niederlage im Turnierverlauf an.
       </p>
-      <table className="table">
+      <table className="table stack">
         <thead>
           <tr>
             <th>Name</th>
@@ -32,14 +32,15 @@ export function Setup() {
         <tbody>
           {players.map((p) => (
             <tr key={p.id}>
-              <td>
+              <td data-label="Name">
                 <input
+                  type="text"
                   value={p.name}
                   disabled={locked}
                   onChange={(e) => updatePlayer(p.id, { name: e.target.value })}
                 />
               </td>
-              <td>
+              <td data-label="Gruppe">
                 <select
                   value={p.group}
                   disabled={locked}
@@ -49,7 +50,7 @@ export function Setup() {
                   <option value="B">Gruppe B</option>
                 </select>
               </td>
-              <td>
+              <td data-label="Quote">
                 <input
                   type="number"
                   step="0.01"

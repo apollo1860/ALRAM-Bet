@@ -9,6 +9,10 @@ export function fmtCoins(n: number): string {
   return `${n.toLocaleString('de-DE', { maximumFractionDigits: 2 })} Coins`;
 }
 
+export function fmtCoinsShort(n: number): string {
+  return `🪙 ${n.toLocaleString('de-DE', { maximumFractionDigits: 0 })}`;
+}
+
 export function fmtOdds(n: number): string {
   return n.toFixed(2);
 }

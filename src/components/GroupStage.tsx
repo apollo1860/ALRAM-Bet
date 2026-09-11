@@ -37,7 +37,7 @@ function Schedule({ isAdmin }: { isAdmin: boolean }) {
       <p className="hint">
         Gruppe A und Gruppe B wechseln sich ab, damit an einer Platte immer klar ist, wer als nächstes spielt.
       </p>
-      <table className="table matches-table">
+      <table className="table stack">
         <thead>
           <tr>
             <th>#</th>
@@ -49,12 +49,12 @@ function Schedule({ isAdmin }: { isAdmin: boolean }) {
         <tbody>
           {groupMatches.map((m, i) => (
             <tr key={m.id} className={m.id === nextMatchId ? 'qualified' : undefined}>
-              <td>{i + 1}</td>
-              <td>{m.groupId}</td>
-              <td>
+              <td data-label="#">{i + 1}</td>
+              <td data-label="Gruppe">{m.groupId}</td>
+              <td data-label="Paarung">
                 {playerName(players, m.playerAId)} vs {playerName(players, m.playerBId)}
               </td>
-              <td>
+              <td data-label="Ergebnis">
                 {m.status === 'finished' ? (
                   <strong>
                     {m.scoreA}:{m.scoreB}
@@ -81,34 +81,36 @@ function StandingsTable({ groupId }: { groupId: GroupId }) {
   return (
     <div className="card">
       <h3>Gruppe {groupId}</h3>
-      <table className="table">
-        <thead>
-          <tr>
-            <th>#</th>
-            <th>Spieler</th>
-            <th>Sp</th>
-            <th>S</th>
-            <th>N</th>
-            <th>Punkte +/-</th>
-            <th>Diff</th>
-          </tr>
-        </thead>
-        <tbody>
-          {standings.map((row) => (
-            <tr key={row.playerId} className={row.rank <= 4 ? 'qualified' : 'eliminated-row'}>
-              <td>{row.rank}</td>
-              <td>{playerName(players, row.playerId)}</td>
-              <td>{row.played}</td>
-              <td>{row.wins}</td>
-              <td>{row.losses}</td>
-              <td>
-                {row.pointsFor}:{row.pointsAgainst}
-              </td>
-              <td>{row.diff > 0 ? `+${row.diff}` : row.diff}</td>
+      <div className="table-scroll">
+        <table className="table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Spieler</th>
+              <th>Sp</th>
+              <th>S</th>
+              <th>N</th>
+              <th>Punkte</th>
+              <th>Diff</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {standings.map((row) => (
+              <tr key={row.playerId} className={row.rank <= 4 ? 'qualified' : 'eliminated-row'}>
+                <td>{row.rank}</td>
+                <td>{playerName(players, row.playerId)}</td>
+                <td>{row.played}</td>
+                <td>{row.wins}</td>
+                <td>{row.losses}</td>
+                <td>
+                  {row.pointsFor}:{row.pointsAgainst}
+                </td>
+                <td>{row.diff > 0 ? `+${row.diff}` : row.diff}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
       <p className="hint">Beste 4 kommen weiter, Platz 5 scheidet aus.</p>
     </div>
   );

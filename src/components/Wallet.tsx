@@ -46,7 +46,7 @@ export function Wallet({ playerId }: { playerId: string | null }) {
 
       <h3>Meine Wetten</h3>
       {myBets.length === 0 && <p className="hint">Noch keine Wetten platziert.</p>}
-      <table className="table">
+      <table className="table stack">
         <thead>
           <tr>
             <th>Spiel</th>
@@ -62,14 +62,16 @@ export function Wallet({ playerId }: { playerId: string | null }) {
             const m = matches.find((mm) => mm.id === b.matchId);
             return (
               <tr key={b.id}>
-                <td>
+                <td data-label="Spiel">
                   {m ? `${playerName(players, m.playerAId)} vs ${playerName(players, m.playerBId)}` : b.matchId}
                 </td>
-                <td>{playerName(players, b.pickedPlayerId)}</td>
-                <td>{fmtCoins(b.amount)}</td>
-                <td>{fmtOdds(b.oddsAtPlacement)}</td>
-                <td className={`status-${b.status}`}>{b.status}</td>
-                <td>{b.payout !== null ? fmtCoins(b.payout) : '—'}</td>
+                <td data-label="Tipp">{playerName(players, b.pickedPlayerId)}</td>
+                <td data-label="Einsatz">{fmtCoins(b.amount)}</td>
+                <td data-label="Quote">{fmtOdds(b.oddsAtPlacement)}</td>
+                <td data-label="Status" className={`status-${b.status}`}>
+                  {b.status}
+                </td>
+                <td data-label="Auszahlung">{b.payout !== null ? fmtCoins(b.payout) : '—'}</td>
               </tr>
             );
           })}

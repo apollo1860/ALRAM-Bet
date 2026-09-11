@@ -1,5 +1,5 @@
 import { useStore } from '../store/useStore';
-import { ADMIN_ID, fmtCoins } from '../lib/format';
+import { ADMIN_ID, fmtCoinsShort } from '../lib/format';
 
 export function PlayerSwitcher() {
   const players = useStore((s) => s.players);
@@ -12,19 +12,20 @@ export function PlayerSwitcher() {
 
   return (
     <div className="player-switcher">
-      <label>
-        Ich bin gerade:
-        <select value={activePlayerId ?? ''} onChange={(e) => setActivePlayer(e.target.value)}>
-          <option value={ADMIN_ID}>🛠 Admin / Turnierleitung</option>
-          {players.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.name}
-              {p.eliminated ? ' (ausgeschieden)' : ''}
-            </option>
-          ))}
-        </select>
-      </label>
-      {balance !== null && <span className="balance-pill">{fmtCoins(balance)}</span>}
+      {balance !== null && <span className="balance-pill">{fmtCoinsShort(balance)}</span>}
+      <select
+        aria-label="Aktive Identität wählen"
+        value={activePlayerId ?? ''}
+        onChange={(e) => setActivePlayer(e.target.value)}
+      >
+        <option value={ADMIN_ID}>🛠 Admin</option>
+        {players.map((p) => (
+          <option key={p.id} value={p.id}>
+            {p.name}
+            {p.eliminated ? ' ✗' : ''}
+          </option>
+        ))}
+      </select>
     </div>
   );
 }

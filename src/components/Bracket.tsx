@@ -23,21 +23,31 @@ function ResultForm({ onSubmit }: { onSubmit: (a: number, b: number) => void }) 
   );
 }
 
+function PlayerLine({ name, isWinner, isDone }: { name: string; isWinner: boolean; isDone: boolean }) {
+  return (
+    <div className={`bracket-player ${isDone && !isWinner ? 'bracket-player-lost' : ''}`}>
+      {name}
+      {isWinner && ' 🏆'}
+    </div>
+  );
+}
+
 function MatchCard({ match, isAdmin }: { match: Match; isAdmin: boolean }) {
   const players = useStore((s) => s.players);
   const enterKnockoutResult = useStore((s) => s.enterKnockoutResult);
   const nameA = playerName(players, match.playerAId);
   const nameB = playerName(players, match.playerBId);
   const ready = match.playerAId && match.playerBId;
+  const done = match.status === 'finished';
 
   return (
     <div className={`bracket-match ${match.status}`}>
       <div className="bracket-slot">{match.slot}</div>
-      <div className="bracket-player">{match.playerAId ? nameA : '—'}</div>
-      <div className="bracket-player">{match.playerBId ? nameB : '—'}</div>
-      {match.status === 'finished' ? (
+      <PlayerLine name={match.playerAId ? nameA : '—'} isWinner={done && match.winnerId === match.playerAId} isDone={done} />
+      <PlayerLine name={match.playerBId ? nameB : '—'} isWinner={done && match.winnerId === match.playerBId} isDone={done} />
+      {done ? (
         <div className="bracket-score">
-          {match.scoreA}:{match.scoreB} — Sieger: {playerName(players, match.winnerId)}
+          {match.scoreA}:{match.scoreB}
         </div>
       ) : ready && isAdmin ? (
         <ResultForm onSubmit={(a, b) => enterKnockoutResult(match.id, a, b)} />
@@ -71,10 +81,12 @@ export function Bracket({ isAdmin }: { isAdmin: boolean }) {
   const byStage = (stage: MatchStage) => matches.filter((m) => m.stage === stage);
 
   return (
-    <div className="bracket">
-      <Round title="Viertelfinale" matches={byStage('qf')} isAdmin={isAdmin} />
-      <Round title="Halbfinale" matches={byStage('sf')} isAdmin={isAdmin} />
-      <Round title="Finale" matches={byStage('final')} isAdmin={isAdmin} />
+    <div className="bracket-scroll">
+      <div className="bracket">
+        <Round title="Viertelfinale" matches={byStage('qf')} isAdmin={isAdmin} />
+        <Round title="Halbfinale" matches={byStage('sf')} isAdmin={isAdmin} />
+        <Round title="Finale" matches={byStage('final')} isAdmin={isAdmin} />
+      </div>
     </div>
   );
 }

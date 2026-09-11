@@ -6,9 +6,10 @@ import { GroupStage } from './components/GroupStage';
 import { Bracket } from './components/Bracket';
 import { Betting } from './components/Betting';
 import { Wallet } from './components/Wallet';
+import { Payout } from './components/Payout';
 import { ADMIN_ID } from './lib/format';
 
-type Tab = 'setup' | 'group' | 'knockout' | 'betting' | 'wallet';
+type Tab = 'setup' | 'group' | 'knockout' | 'betting' | 'wallet' | 'payout';
 
 const TABS: { id: Tab; label: string }[] = [
   { id: 'setup', label: 'Setup' },
@@ -16,6 +17,7 @@ const TABS: { id: Tab; label: string }[] = [
   { id: 'knockout', label: 'K.O.-Runde' },
   { id: 'betting', label: 'Wetten' },
   { id: 'wallet', label: 'Mein Konto' },
+  { id: 'payout', label: 'Abrechnung' },
 ];
 
 function App() {
@@ -45,6 +47,7 @@ function App() {
         {tab === 'knockout' && <Bracket isAdmin={isAdmin} />}
         {tab === 'betting' && <Betting bettorId={bettorId} />}
         {tab === 'wallet' && <Wallet playerId={bettorId} />}
+        {tab === 'payout' && <Payout />}
       </main>
     </div>
   );

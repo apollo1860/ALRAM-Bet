@@ -3,7 +3,7 @@ import { persist } from 'zustand/middleware';
 import type { Bet, Match, Phase, Player, Transaction } from '../types';
 import { buildTournamentSchedule, buildKnockoutMatches, computeStandings, isGroupStageComplete } from '../lib/bracket';
 import { poolOdds, updateRating, winProbability } from '../lib/odds';
-import { buildSeedPlayers } from './seed';
+import { buildDefaultPlayers } from './seed';
 import { ADMIN_ID } from '../lib/format';
 
 interface State {
@@ -36,7 +36,7 @@ function initialWallets(players: Player[]): Record<string, number> {
 }
 
 function freshState() {
-  const players = buildSeedPlayers();
+  const players = buildDefaultPlayers();
   return {
     players,
     matches: [] as Match[],

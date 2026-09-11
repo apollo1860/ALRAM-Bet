@@ -10,13 +10,25 @@
  * Win probability between two ratings uses the standard logistic (Elo) curve.
  * Payout odds for a live bet use a pari-mutuel pool: everyone's stakes on a
  * match go into one pot per outcome, and payout odds are pot-implied, not
- * fixed - they move as people bet. The fair/algorithmic probability is only
- * used to seed the *opening* odds before any money is in the pool.
+ * fixed - they move as people bet.
+ *
+ * With only a couple of bettors per match (the normal case in a small
+ * friend-group tournament), a pure pool split is unstable: the first bet on
+ * a side with no other money in it would collapse straight to even-money
+ * odds, since there'd be nobody else's stake to pay it out of. To avoid
+ * that, "the house" seeds each side with virtual liquidity proportional to
+ * the algorithmic fair probability before any real money arrives; real bets
+ * are added on top of that seed. Odds start at (roughly) the fair odds and
+ * move smoothly as real money comes in, converging to a pure pool split
+ * once real stakes dwarf the seed. The house isn't a real wallet - it's
+ * just bookkeeping slack, since these are virtual coins with no shared pot
+ * that has to balance to zero.
  */
 
 const RATING_SCALE = 400; // same convention as chess Elo, purely a scale choice
 const HOUSE_MARGIN = 0.05; // 5% overround kept by "the house" on pari-mutuel payouts
 const K_FACTOR = 40; // how much one result moves a player's current rating
+const SEED_LIQUIDITY = 300; // virtual "house" stake split across both sides per match
 
 /** Clamp a probability away from 0/1 so log-odds stay finite. */
 function clampProb(p: number): number {
@@ -34,11 +46,6 @@ export function winProbability(ratingA: number, ratingB: number): number {
   return 1 / (1 + Math.pow(10, (ratingB - ratingA) / RATING_SCALE));
 }
 
-/** Convert a probability to fair decimal odds (no margin). */
-export function probToDecimalOdds(p: number): number {
-  return 1 / clampProb(p);
-}
-
 /**
  * New current rating for a player after a match result.
  * actualScore is 1 for a win, 0 for a loss.
@@ -53,25 +60,22 @@ export function updateRating(
 }
 
 /**
- * Pari-mutuel payout odds for one side of a match, given both pools.
- * Falls back to the fair algorithmic odds while a pool is still empty.
+ * Pari-mutuel payout odds for one side of a match, given the real pools on
+ * each side. Both pools are topped up with virtual "house" liquidity split
+ * according to the fair probability before the ratio is taken - see the
+ * module-level comment for why.
  */
 export function poolOdds(
   poolForSide: number,
   poolForOtherSide: number,
   fairProbForSide: number
 ): number {
-  const totalPool = poolForSide + poolForOtherSide;
-  if (totalPool <= 0) {
-    return roundOdds(probToDecimalOdds(fairProbForSide));
-  }
-  if (poolForSide <= 0) {
-    // nobody has backed this side yet: cap generously instead of returning Infinity
-    return roundOdds(Math.max(probToDecimalOdds(fairProbForSide), 20));
-  }
-  const payoutPool = totalPool * (1 - HOUSE_MARGIN);
+  const fair = clampProb(fairProbForSide);
+  const effectiveSide = poolForSide + SEED_LIQUIDITY * fair;
+  const effectiveOther = poolForOtherSide + SEED_LIQUIDITY * (1 - fair);
+  const payoutPool = (effectiveSide + effectiveOther) * (1 - HOUSE_MARGIN);
   // never let a winning bet pay out less than the stake, even in a lopsided pool
-  return roundOdds(Math.max(payoutPool / poolForSide, 1.01));
+  return roundOdds(Math.max(payoutPool / effectiveSide, 1.01));
 }
 
 function roundOdds(odds: number): number {

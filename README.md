@@ -1,32 +1,36 @@
-# React + TypeScript + Vite
+# ALRAM Bet 🏓
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+Sportwetten-App für ein Hobby-Tischtennisturnier: 2 Gruppen à 5 Spieler
+(Round Robin), die besten 4 pro Gruppe kommen in ein Single-K.O.-Bracket
+(1A-4B, 3A-2B, 1B-4A, 3B-2A, Gruppensieger treffen sich frühestens im
+Finale). Vor dem Turnier hinterlegte Gesamtsieg-Quoten bestimmen die
+Ausgangsstärke jedes Spielers; die Quoten für einzelne Spiele werden
+daraus berechnet und passen sich nach jedem Ergebnis automatisch an
+(Sieg/Niederlage im Turnierverlauf = Form).
 
-Currently, two official plugins are available:
+Wetten laufen als dynamischer Pari-Mutuel-Markt: Einsätze fließen in
+einen Pool pro Seite, die Auszahlungsquote bewegt sich live mit dem
+Wettverhalten und wird beim Spielende aus dem finalen Pool berechnet.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Aktueller Stand
 
-## React Compiler
+Alles läuft aktuell **auf einem Gerät**: Ein Dropdown oben in der App
+wechselt die "aktive Identität" zwischen Admin (Setup, Ergebnisse
+eintragen, Turnier steuern) und den einzelnen Spielern (Guthaben
+einzahlen, wetten, eigene Wetten einsehen) – so lässt sich der ganze
+Ablauf inkl. Quotenberechnung solo durchtesten. Der Zustand wird per
+`localStorage` gespeichert und übersteht ein Schließen des Browsers.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+Geplant: Anbindung an Firebase, damit mehrere Personen im selben
+"Raum" gleichzeitig zugreifen und wetten können.
 
-## Expanding the Oxlint configuration
+## Entwicklung
 
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```bash
+npm install
+npm run dev
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+```bash
+npm run build   # Typecheck + Produktionsbuild
+```

@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { Bet, Match, Phase, Player, Transaction } from '../types';
-import { buildGroupMatches, buildKnockoutMatches, computeStandings, isGroupStageComplete } from '../lib/bracket';
+import { buildTournamentSchedule, buildKnockoutMatches, computeStandings, isGroupStageComplete } from '../lib/bracket';
 import { poolOdds, updateRating, winProbability } from '../lib/odds';
 import { buildSeedPlayers } from './seed';
 import { ADMIN_ID } from '../lib/format';
@@ -102,7 +102,7 @@ export const useStore = create<State>()(
         const { players } = get();
         const groupA = players.filter((p) => p.group === 'A').map((p) => p.id);
         const groupB = players.filter((p) => p.group === 'B').map((p) => p.id);
-        const matches = [...buildGroupMatches('A', groupA), ...buildGroupMatches('B', groupB)];
+        const matches = buildTournamentSchedule(groupA, groupB);
         set({ matches: stampFairProbs(players, matches), phase: 'group' });
       },
 

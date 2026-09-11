@@ -24,29 +24,48 @@ export function roundRobinRounds(playerIds: string[]): Array<Array<[string, stri
   return rounds;
 }
 
-export function buildGroupMatches(groupId: GroupId, playerIds: string[]): Match[] {
-  const rounds = roundRobinRounds(playerIds);
+function makeGroupMatch(groupId: GroupId, seq: number, pair: [string, string]): Match {
+  return {
+    id: `${groupId}${seq}`,
+    stage: 'group',
+    groupId,
+    slot: `${groupId}${seq}`,
+    playerAId: pair[0],
+    playerBId: pair[1],
+    winnerTo: undefined,
+    scoreA: null,
+    scoreB: null,
+    winnerId: null,
+    status: 'ready',
+    fairProbA: null,
+    poolA: 0,
+    poolB: 0,
+  };
+}
+
+/**
+ * Full group-stage schedule for a single table: group A's and group B's
+ * round-robin matches interleaved round-by-round (A, B, A, B, ...) instead
+ * of playing out one group before the other, so whoever runs the one table
+ * can just work down this list in order.
+ */
+export function buildTournamentSchedule(groupAIds: string[], groupBIds: string[]): Match[] {
+  const roundsA = roundRobinRounds(groupAIds);
+  const roundsB = roundRobinRounds(groupBIds);
+  const numRounds = Math.max(roundsA.length, roundsB.length);
   const matches: Match[] = [];
-  rounds.forEach((pairs, roundIdx) => {
-    pairs.forEach(([a, b], i) => {
-      matches.push({
-        id: `${groupId}-r${roundIdx + 1}-${i + 1}`,
-        stage: 'group',
-        groupId,
-        slot: `${groupId}${matches.length + 1}`,
-        playerAId: a,
-        playerBId: b,
-        winnerTo: undefined,
-        scoreA: null,
-        scoreB: null,
-        winnerId: null,
-        status: 'ready',
-        fairProbA: null,
-        poolA: 0,
-        poolB: 0,
-      });
-    });
-  });
+  let seqA = 0;
+  let seqB = 0;
+
+  for (let r = 0; r < numRounds; r++) {
+    const pairsA = roundsA[r] ?? [];
+    const pairsB = roundsB[r] ?? [];
+    const maxLen = Math.max(pairsA.length, pairsB.length);
+    for (let i = 0; i < maxLen; i++) {
+      if (pairsA[i]) matches.push(makeGroupMatch('A', ++seqA, pairsA[i]));
+      if (pairsB[i]) matches.push(makeGroupMatch('B', ++seqB, pairsB[i]));
+    }
+  }
   return matches;
 }
 

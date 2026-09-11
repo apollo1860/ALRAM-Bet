@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useStore } from '../store/useStore';
 import { computeStandings, isGroupStageComplete } from '../lib/bracket';
 import { playerName } from '../lib/format';
-import type { GroupId } from '../types';
+import type { GroupId, Match } from '../types';
 
 function ResultForm({ onSubmit }: { onSubmit: (a: number, b: number) => void }) {
   const [a, setA] = useState('');
@@ -24,11 +24,58 @@ function ResultForm({ onSubmit }: { onSubmit: (a: number, b: number) => void }) 
   );
 }
 
-function GroupTable({ groupId, isAdmin }: { groupId: GroupId; isAdmin: boolean }) {
+function Schedule({ isAdmin }: { isAdmin: boolean }) {
   const players = useStore((s) => s.players);
   const matches = useStore((s) => s.matches);
   const enterGroupResult = useStore((s) => s.enterGroupResult);
-  const groupMatches = matches.filter((m) => m.stage === 'group' && m.groupId === groupId);
+  const groupMatches = matches.filter((m): m is Match => m.stage === 'group');
+  const nextMatchId = groupMatches.find((m) => m.status !== 'finished')?.id;
+
+  return (
+    <div className="card">
+      <h3>Spielplan (eine Platte)</h3>
+      <p className="hint">
+        Gruppe A und Gruppe B wechseln sich ab, damit an einer Platte immer klar ist, wer als nächstes spielt.
+      </p>
+      <table className="table matches-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Gruppe</th>
+            <th>Paarung</th>
+            <th>Ergebnis</th>
+          </tr>
+        </thead>
+        <tbody>
+          {groupMatches.map((m, i) => (
+            <tr key={m.id} className={m.id === nextMatchId ? 'qualified' : undefined}>
+              <td>{i + 1}</td>
+              <td>{m.groupId}</td>
+              <td>
+                {playerName(players, m.playerAId)} vs {playerName(players, m.playerBId)}
+              </td>
+              <td>
+                {m.status === 'finished' ? (
+                  <strong>
+                    {m.scoreA}:{m.scoreB}
+                  </strong>
+                ) : isAdmin ? (
+                  <ResultForm onSubmit={(a, b) => enterGroupResult(m.id, a, b)} />
+                ) : (
+                  <em>offen</em>
+                )}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function StandingsTable({ groupId }: { groupId: GroupId }) {
+  const players = useStore((s) => s.players);
+  const matches = useStore((s) => s.matches);
   const standings = computeStandings(groupId, players, matches);
 
   return (
@@ -63,29 +110,6 @@ function GroupTable({ groupId, isAdmin }: { groupId: GroupId; isAdmin: boolean }
         </tbody>
       </table>
       <p className="hint">Beste 4 kommen weiter, Platz 5 scheidet aus.</p>
-
-      <table className="table matches-table">
-        <tbody>
-          {groupMatches.map((m) => (
-            <tr key={m.id}>
-              <td>
-                {playerName(players, m.playerAId)} vs {playerName(players, m.playerBId)}
-              </td>
-              <td>
-                {m.status === 'finished' ? (
-                  <strong>
-                    {m.scoreA}:{m.scoreB}
-                  </strong>
-                ) : isAdmin ? (
-                  <ResultForm onSubmit={(a, b) => enterGroupResult(m.id, a, b)} />
-                ) : (
-                  <em>offen</em>
-                )}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
     </div>
   );
 }
@@ -102,14 +126,17 @@ export function GroupStage({ isAdmin }: { isAdmin: boolean }) {
   const bothDone = isGroupStageComplete('A', matches) && isGroupStageComplete('B', matches);
 
   return (
-    <div className="two-col">
-      <GroupTable groupId="A" isAdmin={isAdmin} />
-      <GroupTable groupId="B" isAdmin={isAdmin} />
+    <>
+      <Schedule isAdmin={isAdmin} />
+      <div className="two-col">
+        <StandingsTable groupId="A" />
+        <StandingsTable groupId="B" />
+      </div>
       {isAdmin && bothDone && phase === 'group' && (
         <div className="card">
           <button onClick={startKnockoutStage}>K.O.-Runde auslosen &amp; starten</button>
         </div>
       )}
-    </div>
+    </>
   );
 }

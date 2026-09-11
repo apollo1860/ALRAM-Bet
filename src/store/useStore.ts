@@ -116,7 +116,9 @@ export const useStore = create<State>()(
         const updatedMatches = matches.map((m) =>
           m.id === matchId ? { ...m, scoreA, scoreB, winnerId, status: 'finished' as const } : m
         );
+        const finished = updatedMatches.find((m) => m.id === matchId)!;
         set({ players: updatedPlayers, matches: stampFairProbs(updatedPlayers, updatedMatches) });
+        get()._resolveBetsFor(matchId, winnerId, finished);
       },
 
       startKnockoutStage: () => {

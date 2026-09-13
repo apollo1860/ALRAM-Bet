@@ -1,6 +1,6 @@
 import { useStore } from '../store/useStore';
 import { computeFinalPayout } from '../lib/payout';
-import { fmtCoins, playerName } from '../lib/format';
+import { fmtCoins, fmtEuro, playerName } from '../lib/format';
 
 export function Payout() {
   const players = useStore((s) => s.players);
@@ -32,7 +32,7 @@ export function Payout() {
         )
       )}
       <p>
-        Gesamttopf (alle Einzahlungen zusammen): <strong>{fmtCoins(totalPot)}</strong>
+        Gesamttopf (alle Einzahlungen zusammen): <strong>{fmtEuro(totalPot)}</strong>
       </p>
       <p className="hint">
         Der Topf wird am Ende anteilig nach Coin-Endstand ausgezahlt - wer mit mehr Coins dasteht, kriegt einen
@@ -53,11 +53,11 @@ export function Payout() {
           {sortedRows.map((row) => (
             <tr key={row.playerId}>
               <td data-label="Spieler">{playerName(players, row.playerId)}</td>
-              <td data-label="Eingezahlt">{fmtCoins(row.deposited)}</td>
+              <td data-label="Eingezahlt">{fmtEuro(row.deposited)}</td>
               <td data-label="Coins am Ende">{fmtCoins(row.finalCoins)}</td>
               <td data-label="Anteil">{row.sharePercent.toFixed(1)}%</td>
               <td data-label="Auszahlung">
-                <strong>{fmtCoins(row.payout)}</strong>
+                <strong>{fmtEuro(row.payout)}</strong>
               </td>
             </tr>
           ))}
@@ -66,7 +66,7 @@ export function Payout() {
           <tr>
             <td colSpan={4}>Summe Auszahlungen</td>
             <td data-label="Gesamt">
-              <strong>{fmtCoins(sumPayout)}</strong>
+              <strong>{fmtEuro(sumPayout)}</strong>
             </td>
           </tr>
         </tfoot>

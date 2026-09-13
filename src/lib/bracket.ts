@@ -32,7 +32,7 @@ function makeGroupMatch(groupId: GroupId, seq: number, pair: [string, string]): 
     slot: `${groupId}${seq}`,
     playerAId: pair[0],
     playerBId: pair[1],
-    winnerTo: undefined,
+    winnerTo: null,
     scoreA: null,
     scoreB: null,
     winnerId: null,
@@ -135,7 +135,7 @@ export function buildKnockoutMatches(standingsA: StandingRow[], standingsB: Stan
   const a = (rank: number) => standingsA.find((r) => r.rank === rank)!.playerId;
   const b = (rank: number) => standingsB.find((r) => r.rank === rank)!.playerId;
 
-  const blank = (id: string, slot: string, aId: string | null, bId: string | null, stage: Match['stage'], winnerTo?: Match['winnerTo']): Match => ({
+  const blank = (id: string, slot: string, aId: string | null, bId: string | null, stage: Match['stage'], winnerTo: Match['winnerTo']): Match => ({
     id,
     stage,
     slot,
@@ -158,6 +158,6 @@ export function buildKnockoutMatches(standingsA: StandingRow[], standingsB: Stan
     blank('QF4', 'QF4', b(3), a(2), 'qf', { matchSlot: 'SF2', as: 'B' }),
     blank('SF1', 'SF1', null, null, 'sf', { matchSlot: 'F1', as: 'A' }),
     blank('SF2', 'SF2', null, null, 'sf', { matchSlot: 'F1', as: 'B' }),
-    blank('F1', 'F1', null, null, 'final', undefined),
+    blank('F1', 'F1', null, null, 'final', null),
   ];
 }

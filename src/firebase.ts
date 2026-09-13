@@ -1,15 +1,17 @@
 import { initializeApp } from 'firebase/app';
-import { initializeFirestore } from 'firebase/firestore';
+import { getDatabase } from 'firebase/database';
 
 /**
- * Firebase web config for the "alram-bet" project. This is safe to ship in
- * client code (it identifies the project, it isn't a secret) - the actual
- * access control is the Firestore security rules on the project, which need
- * to allow read/write on `rooms/{code}` for multi-device mode to work.
+ * Firebase web config for the "alram-bet" project, using Realtime Database
+ * (not Firestore) since that's the database provisioned in this project.
+ * This is safe to ship in client code (it identifies the project, it isn't
+ * a secret) - the actual access control is the database's security rules,
+ * which need to allow read/write on `rooms/{code}` for multi-device mode.
  */
 const firebaseConfig = {
   apiKey: 'AIzaSyADs2n5UTl850wVbUaLL40ABBpsP6sr79M',
   authDomain: 'alram-bet.firebaseapp.com',
+  databaseURL: 'https://alram-bet-default-rtdb.europe-west1.firebasedatabase.app',
   projectId: 'alram-bet',
   storageBucket: 'alram-bet.firebasestorage.app',
   messagingSenderId: '335311781186',
@@ -17,10 +19,4 @@ const firebaseConfig = {
 };
 
 export const firebaseApp = initializeApp(firebaseConfig);
-
-// Some networks (restrictive proxies/firewalls) break Firestore's normal
-// streaming connection; auto-detecting long-polling falls back to plain
-// HTTP requests there while still using the fast path everywhere else.
-export const db = initializeFirestore(firebaseApp, {
-  experimentalAutoDetectLongPolling: true,
-});
+export const db = getDatabase(firebaseApp);

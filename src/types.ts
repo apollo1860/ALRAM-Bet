@@ -23,8 +23,8 @@ export interface Match {
   slot?: string;
   playerAId: string | null;
   playerBId: string | null;
-  /** Slots this match's winner feeds into, e.g. { winnerTo: 'SF1', asSlot: 'A' } */
-  winnerTo?: { matchSlot: string; as: 'A' | 'B' };
+  /** Slots this match's winner feeds into, e.g. { winnerTo: 'SF1', asSlot: 'A' }. null (not just omitted) so it serializes cleanly to Firebase, which rejects undefined values. */
+  winnerTo: { matchSlot: string; as: 'A' | 'B' } | null;
   scoreA: number | null;
   scoreB: number | null;
   winnerId: string | null;

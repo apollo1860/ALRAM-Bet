@@ -58,9 +58,18 @@ export interface Transaction {
   note?: string;
 }
 
-export interface Wallet {
-  playerId: string;
-  balance: number;
-}
-
 export type Phase = 'setup' | 'group' | 'knockout' | 'done';
+
+/**
+ * The slice of app state that's shared across devices in a multi-device
+ * room. Deliberately excludes activePlayerId, which stays local to each
+ * device - it's "who is holding this phone right now", not shared state.
+ */
+export interface SyncedState {
+  players: Player[];
+  matches: Match[];
+  wallets: Record<string, number>;
+  transactions: Transaction[];
+  bets: Bet[];
+  phase: Phase;
+}

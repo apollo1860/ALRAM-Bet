@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { Bet, Match, Phase, Player, Transaction } from '../types';
+import type { Bet, Match, Phase, Player, SyncedState, Transaction } from '../types';
 import { buildTournamentSchedule, buildKnockoutMatches, computeStandings, isGroupStageComplete } from '../lib/bracket';
 import { poolOdds, updateRating, winProbability } from '../lib/odds';
 import { buildDefaultPlayers } from './seed';
@@ -25,6 +25,8 @@ interface State {
   depositCoins: (playerId: string, amount: number) => void;
   placeBet: (matchId: string, bettorId: string, pickedPlayerId: string, amount: number) => string | null;
   resetTournament: () => void;
+  /** Replace the shared slice of state with data received from a multi-device room, leaving activePlayerId untouched. */
+  applyRemoteState: (data: SyncedState) => void;
   /** Internal: settle open bets on a finished match. Not meant for UI use. */
   _resolveBetsFor: (matchId: string, winnerId: string, finishedMatch: Match) => void;
 }
@@ -35,17 +37,21 @@ function initialWallets(players: Player[]): Record<string, number> {
   return w;
 }
 
-function freshState() {
+/** The shared/syncable slice only - what a brand new multi-device room starts from. */
+export function freshSyncedState(): SyncedState {
   const players = buildDefaultPlayers();
   return {
     players,
-    matches: [] as Match[],
+    matches: [],
     wallets: initialWallets(players),
-    transactions: [] as Transaction[],
-    bets: [] as Bet[],
-    activePlayerId: ADMIN_ID,
-    phase: 'setup' as Phase,
+    transactions: [],
+    bets: [],
+    phase: 'setup',
   };
+}
+
+function freshState() {
+  return { ...freshSyncedState(), activePlayerId: ADMIN_ID };
 }
 
 function applyRatingUpdate(players: Player[], winnerId: string, loserId: string): Player[] {
@@ -254,6 +260,8 @@ export const useStore = create<State>()(
       },
 
       resetTournament: () => set(freshState()),
+
+      applyRemoteState: (data) => set(data),
     }),
     { name: 'alram-bet-storage' }
   )

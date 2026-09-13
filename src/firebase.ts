@@ -1,21 +1,26 @@
 import { initializeApp } from 'firebase/app';
-import { getFirestore } from 'firebase/firestore';
+import { initializeFirestore } from 'firebase/firestore';
 
 /**
- * Paste your Firebase project config here: Firebase console -> Project
- * settings -> General -> "Your apps" -> SDK setup and configuration -> Config.
- * Until this is filled in, multi-device mode will fail with a clear error
- * when trying to create or join a room - single-device mode doesn't touch
- * Firebase at all and works regardless.
+ * Firebase web config for the "alram-bet" project. This is safe to ship in
+ * client code (it identifies the project, it isn't a secret) - the actual
+ * access control is the Firestore security rules on the project, which need
+ * to allow read/write on `rooms/{code}` for multi-device mode to work.
  */
 const firebaseConfig = {
-  apiKey: 'REPLACE_ME',
-  authDomain: 'REPLACE_ME.firebaseapp.com',
-  projectId: 'REPLACE_ME',
-  storageBucket: 'REPLACE_ME.appspot.com',
-  messagingSenderId: 'REPLACE_ME',
-  appId: 'REPLACE_ME',
+  apiKey: 'AIzaSyADs2n5UTl850wVbUaLL40ABBpsP6sr79M',
+  authDomain: 'alram-bet.firebaseapp.com',
+  projectId: 'alram-bet',
+  storageBucket: 'alram-bet.firebasestorage.app',
+  messagingSenderId: '335311781186',
+  appId: '1:335311781186:web:69ab4a134a284b0c965cdb',
 };
 
 export const firebaseApp = initializeApp(firebaseConfig);
-export const db = getFirestore(firebaseApp);
+
+// Some networks (restrictive proxies/firewalls) break Firestore's normal
+// streaming connection; auto-detecting long-polling falls back to plain
+// HTTP requests there while still using the fast path everywhere else.
+export const db = initializeFirestore(firebaseApp, {
+  experimentalAutoDetectLongPolling: true,
+});

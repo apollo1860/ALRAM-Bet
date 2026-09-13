@@ -120,6 +120,16 @@ header {
   font-weight: 600;
 }
 
+.identity-label {
+  padding: 8px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  font-size: 0.85rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
 .balance-pill {
   background: var(--success);
   color: var(--success-ink);
@@ -208,6 +218,28 @@ header {
   background: var(--surface-2);
   color: var(--text);
   border-color: var(--border);
+}
+
+.identity-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 2px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-2);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.identity-option input {
+  width: 18px;
+  height: 18px;
+}
+
+.identity-option.selected {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
 }
 
 .room-code-display {

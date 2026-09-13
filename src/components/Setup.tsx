@@ -1,7 +1,7 @@
 import { useStore } from '../store/useStore';
 import type { GroupId } from '../types';
 
-export function Setup() {
+export function Setup({ isAdmin }: { isAdmin: boolean }) {
   const players = useStore((s) => s.players);
   const phase = useStore((s) => s.phase);
   const updatePlayer = useStore((s) => s.updatePlayer);
@@ -10,7 +10,7 @@ export function Setup() {
 
   const groupA = players.filter((p) => p.group === 'A');
   const groupB = players.filter((p) => p.group === 'B');
-  const locked = phase !== 'setup';
+  const editable = phase === 'setup' && isAdmin;
   const canStart = groupA.length === 5 && groupB.length === 5;
 
   return (
@@ -21,6 +21,7 @@ export function Setup() {
         einzelne Spiele berechnet (wer ist Favorit gegen wen) – die Stärke passt sich danach automatisch an
         Sieg/Niederlage im Turnierverlauf an.
       </p>
+      {!isAdmin && <p className="hint">Nur der Admin kann Spieler, Gruppen und Quoten bearbeiten.</p>}
       <table className="table stack">
         <thead>
           <tr>
@@ -36,14 +37,14 @@ export function Setup() {
                 <input
                   type="text"
                   value={p.name}
-                  disabled={locked}
+                  disabled={!editable}
                   onChange={(e) => updatePlayer(p.id, { name: e.target.value })}
                 />
               </td>
               <td data-label="Gruppe">
                 <select
                   value={p.group}
-                  disabled={locked}
+                  disabled={!editable}
                   onChange={(e) => updatePlayer(p.id, { group: e.target.value as GroupId })}
                 >
                   <option value="A">Gruppe A</option>
@@ -56,7 +57,7 @@ export function Setup() {
                   step="0.01"
                   min="1.01"
                   value={p.initialOdds}
-                  disabled={locked}
+                  disabled={!editable}
                   onChange={(e) => updatePlayer(p.id, { initialOdds: Number(e.target.value) })}
                 />
               </td>
@@ -67,12 +68,12 @@ export function Setup() {
       <p className="hint">
         Gruppe A: {groupA.length}/5 &nbsp;·&nbsp; Gruppe B: {groupB.length}/5
       </p>
-      {!locked && (
+      {isAdmin && editable && (
         <button disabled={!canStart} onClick={startGroupStage}>
           Turnier starten (Gruppenphase erzeugen)
         </button>
       )}
-      {locked && (
+      {isAdmin && !editable && (
         <div className="danger-zone">
           <p className="hint">Turnier läuft bereits (Phase: {phase}).</p>
           <button className="danger" onClick={() => confirm('Wirklich das ganze Turnier zurücksetzen?') && resetTournament()}>

@@ -55,7 +55,7 @@ function MainApp({ isMulti }: { isMulti: boolean }) {
 
       <main>
         {isMulti && <ConnectionBar />}
-        {tab === 'setup' && <Setup />}
+        {tab === 'setup' && <Setup isAdmin={isAdmin} />}
         {tab === 'group' && <GroupStage isAdmin={isAdmin} />}
         {tab === 'knockout' && <Bracket isAdmin={isAdmin} />}
         {tab === 'betting' && <Betting bettorId={bettorId} />}

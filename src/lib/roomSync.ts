@@ -1,7 +1,7 @@
 import { get, onValue, ref, set as dbSet } from 'firebase/database';
 import { db } from '../firebase';
 import { useStore, freshSyncedState } from '../store/useStore';
-import type { SyncedState } from '../types';
+import type { Player, SyncedState } from '../types';
 
 const SYNCED_KEYS = ['players', 'matches', 'wallets', 'transactions', 'bets', 'phase'] as const;
 
@@ -55,6 +55,12 @@ function withTimeout<T>(promise: Promise<T>, ms = 8000): Promise<T> {
 export async function roomExists(code: string): Promise<boolean> {
   const snap = await withTimeout(get(roomRef(code)));
   return snap.exists();
+}
+
+/** Read a room's current roster, so a joining device can offer "which of these are you?". */
+export async function getRoomPlayers(code: string): Promise<Player[]> {
+  const snap = await withTimeout(get(ref(db, `rooms/${code}/players`)));
+  return (snap.val() as Player[] | null) ?? [];
 }
 
 /** Create a brand new room, starting from a fresh (unstarted) tournament. */

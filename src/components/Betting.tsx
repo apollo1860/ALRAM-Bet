@@ -4,6 +4,28 @@ import { poolOdds } from '../lib/odds';
 import { fmtCoins, fmtOdds, playerName } from '../lib/format';
 import type { Match } from '../types';
 
+function OddsBox({
+  name,
+  odds,
+  pool,
+  selected,
+  onClick,
+}: {
+  name: string;
+  odds: number;
+  pool: number;
+  selected?: boolean;
+  onClick?: () => void;
+}) {
+  return (
+    <div className={`odds-box ${selected ? 'selected' : ''}`} onClick={onClick}>
+      <div>{name}</div>
+      <div className="odds-value">{fmtOdds(odds)}</div>
+      <div className="hint">Pool: {fmtCoins(pool)}</div>
+    </div>
+  );
+}
+
 function BetRow({ match, bettorId }: { match: Match; bettorId: string }) {
   const players = useStore((s) => s.players);
   const placeBet = useStore((s) => s.placeBet);
@@ -35,16 +57,20 @@ function BetRow({ match, bettorId }: { match: Match; bettorId: string }) {
         <span className="pill">{match.status === 'live' ? 'läuft' : 'offen'}</span>
       </div>
       <div className="odds-row">
-        <div className={`odds-box ${side === 'A' ? 'selected' : ''}`} onClick={() => setSide('A')}>
-          <div>{playerName(players, match.playerAId)}</div>
-          <div className="odds-value">{fmtOdds(oddsA)}</div>
-          <div className="hint">Pool: {fmtCoins(match.poolA)}</div>
-        </div>
-        <div className={`odds-box ${side === 'B' ? 'selected' : ''}`} onClick={() => setSide('B')}>
-          <div>{playerName(players, match.playerBId)}</div>
-          <div className="odds-value">{fmtOdds(oddsB)}</div>
-          <div className="hint">Pool: {fmtCoins(match.poolB)}</div>
-        </div>
+        <OddsBox
+          name={playerName(players, match.playerAId)}
+          odds={oddsA}
+          pool={match.poolA}
+          selected={side === 'A'}
+          onClick={() => setSide('A')}
+        />
+        <OddsBox
+          name={playerName(players, match.playerBId)}
+          odds={oddsB}
+          pool={match.poolB}
+          selected={side === 'B'}
+          onClick={() => setSide('B')}
+        />
       </div>
       {isOwnMatch ? (
         <p className="hint">Du spielst selbst in diesem Match – keine Wette möglich.</p>
@@ -70,11 +96,39 @@ function BetRow({ match, bettorId }: { match: Match; bettorId: string }) {
   );
 }
 
-export function Betting({ bettorId }: { bettorId: string | null }) {
+function AdminMatchRow({ match }: { match: Match }) {
+  const players = useStore((s) => s.players);
+  const lockMatch = useStore((s) => s.lockMatch);
+  const fairProbA = match.fairProbA ?? 0.5;
+  const oddsA = poolOdds(match.poolA, match.poolB, fairProbA);
+  const oddsB = poolOdds(match.poolB, match.poolA, 1 - fairProbA);
+
+  return (
+    <div className="card bet-card">
+      <div className="bet-header">
+        <span>
+          {playerName(players, match.playerAId)} <em>vs</em> {playerName(players, match.playerBId)}
+        </span>
+        <span className="pill">{match.status === 'live' ? 'läuft' : 'offen'}</span>
+      </div>
+      <div className="odds-row">
+        <OddsBox name={playerName(players, match.playerAId)} odds={oddsA} pool={match.poolA} />
+        <OddsBox name={playerName(players, match.playerBId)} odds={oddsB} pool={match.poolB} />
+      </div>
+      {match.status === 'ready' ? (
+        <button onClick={() => lockMatch(match.id)}>Wetten schließen &amp; Spiel starten</button>
+      ) : (
+        <p className="hint">Wetten geschlossen – Ergebnis nach dem Spiel im Gruppen- bzw. K.O.-Tab eintragen.</p>
+      )}
+    </div>
+  );
+}
+
+export function Betting({ bettorId, isAdmin }: { bettorId: string | null; isAdmin: boolean }) {
   const matches = useStore((s) => s.matches);
   const open = matches.filter((m) => (m.status === 'ready' || m.status === 'live') && m.playerAId && m.playerBId);
 
-  if (!bettorId) {
+  if (!bettorId && !isAdmin) {
     return <p className="hint">Bitte oben einen Spieler auswählen, um Wetten platzieren zu können.</p>;
   }
 
@@ -84,9 +138,9 @@ export function Betting({ bettorId }: { bettorId: string | null }) {
 
   return (
     <div className="bet-list">
-      {open.map((m) => (
-        <BetRow key={m.id} match={m} bettorId={bettorId} />
-      ))}
+      {isAdmin
+        ? open.map((m) => <AdminMatchRow key={m.id} match={m} />)
+        : open.map((m) => <BetRow key={m.id} match={m} bettorId={bettorId as string} />)}
     </div>
   );
 }

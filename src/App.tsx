@@ -43,8 +43,12 @@ function MainApp({ isMulti }: { isMulti: boolean }) {
   const [tab, setTab] = useState<Tab>('setup');
   const activePlayerId = useStore((s) => s.activePlayerId);
   const phase = useStore((s) => s.phase);
-  const isAdmin = activePlayerId === ADMIN_ID;
-  const bettorId = isAdmin ? null : activePlayerId;
+  const isRoomAdmin = useAppMode((s) => s.isRoomAdmin);
+  // Single-device mode simulates everyone via the ADMIN_ID dropdown choice;
+  // multi-device mode tracks admin rights separately, since the room
+  // creator is also a real player with their own wallet.
+  const isAdmin = isMulti ? isRoomAdmin : activePlayerId === ADMIN_ID;
+  const bettorId = activePlayerId === ADMIN_ID ? null : activePlayerId;
 
   return (
     <div className="app">

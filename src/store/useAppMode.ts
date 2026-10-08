@@ -6,8 +6,13 @@ export type AppMode = 'single' | 'multi';
 interface AppModeState {
   mode: AppMode | null;
   roomCode: string | null;
+  /** True only for the device that created the current room. Independent of
+   *  which player identity that device picked - the creator is also a real
+   *  player with their own wallet, just with admin rights on top. */
+  isRoomAdmin: boolean;
   setMode: (mode: AppMode | null) => void;
   setRoomCode: (roomCode: string | null) => void;
+  setIsRoomAdmin: (isRoomAdmin: boolean) => void;
 }
 
 /**
@@ -20,8 +25,10 @@ export const useAppMode = create<AppModeState>()(
     (set) => ({
       mode: null,
       roomCode: null,
-      setMode: (mode) => set({ mode, roomCode: null }),
+      isRoomAdmin: false,
+      setMode: (mode) => set({ mode, roomCode: null, isRoomAdmin: false }),
       setRoomCode: (roomCode) => set({ roomCode }),
+      setIsRoomAdmin: (isRoomAdmin) => set({ isRoomAdmin }),
     }),
     { name: 'alram-bet-mode' }
   )

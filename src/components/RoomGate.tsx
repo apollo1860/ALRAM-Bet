@@ -2,19 +2,20 @@ import { useState } from 'react';
 import { useAppMode } from '../store/useAppMode';
 import { useStore } from '../store/useStore';
 import { createRoomDoc, generateRoomCode, getRoomPlayers, roomExists } from '../lib/roomSync';
-import { ADMIN_ID } from '../lib/format';
 import type { Player } from '../types';
 
-type Screen = 'choice' | 'create' | 'join-code' | 'join-identity';
+type Screen = 'choice' | 'create' | 'join-code' | 'identity';
 
 export function RoomGate() {
   const setMode = useAppMode((s) => s.setMode);
   const setRoomCode = useAppMode((s) => s.setRoomCode);
+  const setIsRoomAdmin = useAppMode((s) => s.setIsRoomAdmin);
   const setActivePlayer = useStore((s) => s.setActivePlayer);
   const [screen, setScreen] = useState<Screen>('choice');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [createdCode, setCreatedCode] = useState<string | null>(null);
+  const [pendingCode, setPendingCode] = useState<string | null>(null);
+  const [enteringAsAdmin, setEnteringAsAdmin] = useState(false);
   const [joinInput, setJoinInput] = useState('');
   const [roster, setRoster] = useState<Player[]>([]);
   const [pickedPlayerId, setPickedPlayerId] = useState<string | null>(null);
@@ -28,7 +29,7 @@ export function RoomGate() {
         code = generateRoomCode();
       }
       await createRoomDoc(code);
-      setCreatedCode(code);
+      setPendingCode(code);
       setScreen('create');
     } catch (e) {
       setError(
@@ -39,10 +40,21 @@ export function RoomGate() {
     }
   }
 
-  function enterAsAdmin() {
-    if (!createdCode) return;
-    setActivePlayer(ADMIN_ID);
-    setRoomCode(createdCode);
+  async function proceedToIdentity(code: string, asAdmin: boolean) {
+    setError(null);
+    setBusy(true);
+    try {
+      const players = await getRoomPlayers(code);
+      setRoster(players);
+      setPickedPlayerId(players[0]?.id ?? null);
+      setPendingCode(code);
+      setEnteringAsAdmin(asAdmin);
+      setScreen('identity');
+    } catch (e) {
+      setError(`Verbindung fehlgeschlagen. (${(e as Error).message})`);
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function handleFindRoom() {
@@ -56,23 +68,23 @@ export function RoomGate() {
       const exists = await roomExists(joinInput);
       if (!exists) {
         setError('Raum nicht gefunden. Code prüfen oder neuen Raum erstellen.');
+        setBusy(false);
         return;
       }
-      const players = await getRoomPlayers(joinInput);
-      setRoster(players);
-      setPickedPlayerId(players[0]?.id ?? null);
-      setScreen('join-identity');
     } catch (e) {
       setError(`Verbindung fehlgeschlagen. (${(e as Error).message})`);
-    } finally {
       setBusy(false);
+      return;
     }
+    setBusy(false);
+    await proceedToIdentity(joinInput, false);
   }
 
   function confirmIdentity() {
-    if (!pickedPlayerId) return;
+    if (!pickedPlayerId || !pendingCode) return;
     setActivePlayer(pickedPlayerId);
-    setRoomCode(joinInput);
+    setIsRoomAdmin(enteringAsAdmin);
+    setRoomCode(pendingCode);
   }
 
   return (
@@ -97,16 +109,19 @@ export function RoomGate() {
           </>
         )}
 
-        {screen === 'create' && createdCode && (
+        {screen === 'create' && pendingCode && (
           <>
             <p className="hint">
-              Gib diesen Code an alle anderen Geräte weiter. Du selbst betrittst den Raum als Admin (Setup,
-              Ergebnisse eintragen, Turnier steuern).
+              Gib diesen Code an alle anderen Geräte weiter. Du bist auch selbst ein Spieler - gleich im nächsten
+              Schritt wählst du dich aus der Liste, bekommst aber zusätzlich Admin-Rechte (Setup, Ergebnisse
+              eintragen, Turnier steuern).
             </p>
-            <div className="room-code-display">{createdCode}</div>
+            <div className="room-code-display">{pendingCode}</div>
             <p className="hint">Tipp: Trag zuerst unter Setup die echten Namen ein, bevor du den Code teilst.</p>
             <div className="button-col">
-              <button onClick={enterAsAdmin}>Als Admin betreten</button>
+              <button disabled={busy} onClick={() => proceedToIdentity(pendingCode, true)}>
+                Weiter
+              </button>
               <button className="button-secondary" onClick={() => setScreen('choice')}>
                 Zurück
               </button>
@@ -138,11 +153,12 @@ export function RoomGate() {
           </>
         )}
 
-        {screen === 'join-identity' && (
+        {screen === 'identity' && (
           <>
             <p className="hint">
               Wer bist du? Das legt dieses Gerät fest auf diese Person fest - du kannst nur für dich selbst
               einzahlen und wetten, nicht für andere.
+              {enteringAsAdmin && ' Zusätzlich bekommst du als Raum-Ersteller Admin-Rechte.'}
             </p>
             {roster.length === 0 ? (
               <p className="error">Im Raum sind noch keine Spieler eingetragen. Bitte den Admin, zuerst das Setup auszufüllen.</p>
@@ -163,9 +179,10 @@ export function RoomGate() {
             )}
             <div className="button-col">
               <button disabled={!pickedPlayerId} onClick={confirmIdentity}>
-                Als {roster.find((p) => p.id === pickedPlayerId)?.name ?? '...'} beitreten
+                Als {roster.find((p) => p.id === pickedPlayerId)?.name ?? '...'}
+                {enteringAsAdmin ? ' + Admin' : ''} beitreten
               </button>
-              <button className="button-secondary" onClick={() => setScreen('join-code')}>
+              <button className="button-secondary" onClick={() => setScreen(enteringAsAdmin ? 'create' : 'join-code')}>
                 Zurück
               </button>
             </div>

@@ -8,17 +8,22 @@ export function PlayerSwitcher() {
   const setActivePlayer = useStore((s) => s.setActivePlayer);
   const wallets = useStore((s) => s.wallets);
   const mode = useAppMode((s) => s.mode);
+  const isRoomAdmin = useAppMode((s) => s.isRoomAdmin);
 
-  const isAdmin = activePlayerId === ADMIN_ID;
-  const balance = activePlayerId && !isAdmin ? wallets[activePlayerId] ?? 0 : null;
+  const isSingleAdmin = activePlayerId === ADMIN_ID;
+  const balance = activePlayerId && !isSingleAdmin ? wallets[activePlayerId] ?? 0 : null;
 
   // In a shared multi-device room your identity was fixed when you joined -
-  // no free swapping between people's personal accounts.
+  // no free swapping between people's personal accounts. The room creator
+  // is still a real player (own wallet), just with admin rights on top.
   if (mode === 'multi') {
     return (
       <div className="player-switcher">
         {balance !== null && <span className="balance-pill">{fmtCoinsShort(balance)}</span>}
-        <span className="identity-label">{isAdmin ? '🛠 Admin' : playerName(players, activePlayerId)}</span>
+        <span className="identity-label">
+          {playerName(players, activePlayerId)}
+          {isRoomAdmin && ' 🛠'}
+        </span>
       </div>
     );
   }

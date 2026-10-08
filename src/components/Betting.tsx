@@ -54,7 +54,7 @@ function BetRow({ match, bettorId }: { match: Match; bettorId: string }) {
         <span>
           {playerName(players, match.playerAId)} <em>vs</em> {playerName(players, match.playerBId)}
         </span>
-        <span className="pill">{match.status === 'live' ? 'läuft' : 'offen'}</span>
+        <span className={`pill ${match.status === 'live' ? 'live' : ''}`}>{match.status === 'live' ? 'läuft' : 'offen'}</span>
       </div>
       <div className="odds-row">
         <OddsBox
@@ -109,7 +109,7 @@ function AdminMatchRow({ match }: { match: Match }) {
         <span>
           {playerName(players, match.playerAId)} <em>vs</em> {playerName(players, match.playerBId)}
         </span>
-        <span className="pill">{match.status === 'live' ? 'läuft' : 'offen'}</span>
+        <span className={`pill ${match.status === 'live' ? 'live' : ''}`}>{match.status === 'live' ? 'läuft' : 'offen'}</span>
       </div>
       <div className="odds-row">
         <OddsBox name={playerName(players, match.playerAId)} odds={oddsA} pool={match.poolA} />

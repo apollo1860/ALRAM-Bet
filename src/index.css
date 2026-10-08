@@ -1,42 +1,47 @@
 :root {
   color-scheme: light dark;
-  --bg: #f4f5f7;
+  --bg: #f5f3ec;
   --surface: #ffffff;
-  --surface-2: #f0f1f4;
-  --border: #e1e4e9;
-  --text: #14161a;
-  --muted: #656d7a;
-  --accent: #3b82f6;
+  --surface-2: #efebe0;
+  --border: #e0dac8;
+  --text: #171a17;
+  --muted: #666f67;
+  --accent: #0e7a56;
+  --accent-2: #0a5f44;
   --accent-ink: #ffffff;
-  --success: #16a34a;
+  --gold: #a9780c;
+  --gold-ink: #1c1304;
+  --success: #0e7a56;
   --success-ink: #ffffff;
-  --danger: #e0384a;
+  --danger: #b4392f;
   --danger-ink: #ffffff;
-  --warning: #b8860b;
-  --shadow: 0 1px 2px rgba(20, 22, 26, 0.05), 0 6px 16px rgba(20, 22, 26, 0.06);
-  --radius-lg: 16px;
-  --radius-md: 10px;
+  --shadow: 0 1px 2px rgba(23, 26, 23, 0.06), 0 10px 24px rgba(23, 26, 23, 0.07);
+  --radius-lg: 18px;
+  --radius-md: 12px;
   --radius-sm: 8px;
-  --nav-h: 64px;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Inter, sans-serif;
+  --nav-h: 66px;
+  --font-display: "Oswald", "Arial Narrow", sans-serif;
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #0d0f13;
-    --surface: #171a20;
-    --surface-2: #1e222a;
-    --border: #2a2f3a;
-    --text: #eef0f3;
-    --muted: #9099a8;
-    --accent: #5b9dff;
-    --accent-ink: #06101f;
-    --success: #34d17c;
-    --success-ink: #06210f;
-    --danger: #ff6b7a;
-    --danger-ink: #2a0407;
-    --warning: #e0b345;
-    --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 20px rgba(0, 0, 0, 0.35);
+    --bg: #0d1210;
+    --surface: #171d19;
+    --surface-2: #1f2621;
+    --border: #2b332c;
+    --text: #edf1ec;
+    --muted: #94a099;
+    --accent: #2fd49a;
+    --accent-2: #22b483;
+    --accent-ink: #052016;
+    --gold: #e7b74a;
+    --gold-ink: #241902;
+    --success: #2fd49a;
+    --success-ink: #052016;
+    --danger: #ff8575;
+    --danger-ink: #2c0a06;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.35), 0 12px 28px rgba(0, 0, 0, 0.4);
   }
 }
 
@@ -52,18 +57,20 @@ html {
 body {
   margin: 0;
   background: var(--bg);
+  background-image: radial-gradient(ellipse 900px 500px at 15% -8%, color-mix(in srgb, var(--accent) 10%, transparent), transparent);
   color: var(--text);
   font-size: 15px;
   line-height: 1.45;
 }
 
 h1, h2, h3 {
-  font-weight: 700;
-  letter-spacing: -0.01em;
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: 0.01em;
   margin: 0 0 10px;
 }
-h2 { font-size: 1.05rem; }
-h3 { font-size: 0.95rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.03em; }
+h2 { font-size: 1.15rem; text-transform: uppercase; letter-spacing: 0.02em; }
+h3 { font-size: 0.92rem; color: var(--gold); text-transform: uppercase; letter-spacing: 0.06em; }
 
 p { margin: 0 0 10px; }
 
@@ -86,7 +93,7 @@ header {
   gap: 10px;
   padding: calc(10px + env(safe-area-inset-top)) 4px 10px;
   margin: 0 -4px 12px;
-  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  background: color-mix(in srgb, var(--bg) 90%, transparent);
   backdrop-filter: blur(10px);
   border-bottom: 1px solid var(--border);
 }
@@ -94,10 +101,15 @@ header {
 .brand {
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-weight: 800;
-  font-size: 1.05rem;
+  gap: 7px;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.15rem;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
   white-space: nowrap;
+  border-bottom: 3px solid var(--gold);
+  padding-bottom: 2px;
 }
 
 .player-switcher {
@@ -131,13 +143,14 @@ header {
 }
 
 .balance-pill {
-  background: var(--success);
-  color: var(--success-ink);
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  color: var(--accent-ink);
   padding: 6px 10px;
   border-radius: 999px;
   font-weight: 700;
   font-size: 0.78rem;
   white-space: nowrap;
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--accent) 35%, transparent);
 }
 
 /* ---------- Bottom nav ---------- */
@@ -150,7 +163,7 @@ header {
   z-index: 30;
   display: flex;
   justify-content: space-around;
-  background: color-mix(in srgb, var(--surface) 96%, transparent);
+  background: color-mix(in srgb, var(--surface) 97%, transparent);
   backdrop-filter: blur(10px);
   border-top: 1px solid var(--border);
   padding: 6px max(4px, env(safe-area-inset-left)) calc(6px + env(safe-area-inset-bottom));
@@ -159,19 +172,20 @@ header {
 }
 
 .tabs button {
+  position: relative;
   flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 2px;
-  min-height: 52px;
-  padding: 4px 2px;
+  min-height: 54px;
+  padding: 6px 2px 4px;
   border: none;
   background: transparent;
   color: var(--muted);
   font-weight: 600;
-  font-size: 0.66rem;
+  font-size: 0.65rem;
   border-radius: var(--radius-sm);
 }
 
@@ -185,6 +199,17 @@ header {
   background: color-mix(in srgb, var(--accent) 12%, transparent);
 }
 
+.tabs button.active::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 22%;
+  right: 22%;
+  height: 3px;
+  border-radius: 0 0 3px 3px;
+  background: var(--gold);
+}
+
 /* ---------- Cards & layout ---------- */
 
 .card {
@@ -192,7 +217,7 @@ header {
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow);
-  padding: 16px;
+  padding: 18px;
   margin-bottom: 14px;
 }
 
@@ -218,6 +243,7 @@ header {
   background: var(--surface-2);
   color: var(--text);
   border-color: var(--border);
+  box-shadow: none;
 }
 
 .identity-option {
@@ -243,19 +269,22 @@ header {
 }
 
 .room-code-display {
-  font-size: 2.6rem;
-  font-weight: 800;
+  font-family: var(--font-display);
+  font-size: 2.8rem;
+  font-weight: 700;
   letter-spacing: 0.25em;
   text-align: center;
   padding: 18px 0;
   margin-bottom: 6px;
   background: var(--surface-2);
+  border: 1px solid var(--border);
   border-radius: var(--radius-md);
-  color: var(--accent);
+  color: var(--gold);
 }
 
 .code-input {
   width: 100%;
+  font-family: var(--font-display);
   font-size: 2rem;
   font-weight: 700;
   text-align: center;
@@ -328,29 +357,33 @@ button {
   cursor: pointer;
   padding: 11px 16px;
   border-radius: var(--radius-md);
-  border: 1px solid var(--accent);
-  background: var(--accent);
+  border: 1px solid var(--accent-2);
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
   color: var(--accent-ink);
   font-weight: 700;
   font-size: 0.9rem;
   min-height: 44px;
-  transition: transform 0.05s ease, opacity 0.15s ease;
+  box-shadow: 0 3px 10px color-mix(in srgb, var(--accent) 30%, transparent);
+  transition: transform 0.05s ease, opacity 0.15s ease, box-shadow 0.15s ease;
 }
 
 button:active {
   transform: scale(0.98);
+  box-shadow: 0 1px 4px color-mix(in srgb, var(--accent) 30%, transparent);
 }
 
 button:disabled {
   opacity: 0.45;
   cursor: not-allowed;
   transform: none;
+  box-shadow: none;
 }
 
 button.danger {
   background: var(--danger);
   border-color: var(--danger);
   color: var(--danger-ink);
+  box-shadow: 0 3px 10px color-mix(in srgb, var(--danger) 30%, transparent);
 }
 
 .card > button,
@@ -405,7 +438,7 @@ button.danger {
 }
 
 .qualified {
-  background: color-mix(in srgb, var(--success) 12%, transparent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
 }
 
 .eliminated-row {
@@ -469,6 +502,8 @@ button.danger {
   width: 52px;
   padding: 8px 4px;
   text-align: center;
+  font-family: var(--font-display);
+  font-weight: 600;
 }
 
 .score-form button {
@@ -483,7 +518,7 @@ button.danger {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
   margin: 0 -12px;
-  padding: 0 12px 4px;
+  padding: 4px 12px 8px;
 }
 
 .bracket {
@@ -499,7 +534,19 @@ button.danger {
   padding-left: 2px;
 }
 
+.bracket-round-gf .bracket-match {
+  border-color: var(--gold);
+  border-width: 2px;
+  background: linear-gradient(160deg, color-mix(in srgb, var(--gold) 10%, var(--surface)), var(--surface));
+}
+
+.bracket-round-gf h3 {
+  color: var(--gold);
+  font-size: 1rem;
+}
+
 .bracket-match {
+  position: relative;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
@@ -508,8 +555,23 @@ button.danger {
   box-shadow: var(--shadow);
 }
 
+.bracket-match::before {
+  content: "";
+  position: absolute;
+  top: 10px;
+  bottom: 10px;
+  left: 0;
+  width: 3px;
+  border-radius: 3px;
+  background: var(--border);
+}
+
+.bracket-match.finished::before {
+  background: var(--accent);
+}
+
 .bracket-match.finished {
-  border-color: var(--success);
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
 }
 
 .bracket-match.pending {
@@ -527,6 +589,7 @@ button.danger {
   font-size: 0.68rem;
   color: var(--muted);
   font-weight: 700;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
   margin-bottom: 6px;
 }
@@ -538,8 +601,9 @@ button.danger {
 
 .bracket-score {
   margin-top: 8px;
-  font-size: 0.82rem;
-  color: var(--success);
+  font-family: var(--font-display);
+  font-size: 0.95rem;
+  color: var(--accent);
   font-weight: 600;
 }
 
@@ -556,6 +620,7 @@ button.danger {
   align-items: center;
   margin-bottom: 12px;
   font-size: 0.95rem;
+  font-weight: 600;
 }
 
 .bet-card .bet-header em {
@@ -572,7 +637,14 @@ button.danger {
   border-radius: 999px;
   font-size: 0.7rem;
   font-weight: 700;
+  letter-spacing: 0.03em;
   text-transform: uppercase;
+}
+
+.pill.live {
+  background: color-mix(in srgb, var(--danger) 16%, transparent);
+  border-color: color-mix(in srgb, var(--danger) 45%, transparent);
+  color: var(--danger);
 }
 
 .odds-row {
@@ -602,9 +674,10 @@ button.danger {
 }
 
 .odds-value {
-  font-size: 1.5rem;
-  font-weight: 800;
-  color: var(--accent);
+  font-family: var(--font-display);
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--gold);
   line-height: 1.2;
 }
 
@@ -642,14 +715,15 @@ button.danger {
 }
 
 .balance-big {
-  font-size: 2.2rem;
-  font-weight: 800;
+  font-family: var(--font-display);
+  font-size: 2.4rem;
+  font-weight: 700;
   margin: 2px 0 16px;
-  letter-spacing: -0.02em;
+  color: var(--gold);
 }
 
 .status-won {
-  color: var(--success);
+  color: var(--accent);
   font-weight: 700;
 }
 

@@ -58,10 +58,10 @@ function MatchCard({ match, isAdmin }: { match: Match; isAdmin: boolean }) {
   );
 }
 
-function Round({ title, matches, isAdmin }: { title: string; matches: Match[]; isAdmin: boolean }) {
+function Round({ title, stage, matches, isAdmin }: { title: string; stage: MatchStage; matches: Match[]; isAdmin: boolean }) {
   if (matches.length === 0) return null;
   return (
-    <div className="bracket-round">
+    <div className={`bracket-round ${stage === 'gf' ? 'bracket-round-gf' : ''}`}>
       <h3>{title}</h3>
       {matches.map((m) => (
         <MatchCard key={m.id} match={m} isAdmin={isAdmin} />
@@ -98,7 +98,7 @@ export function Bracket({ isAdmin }: { isAdmin: boolean }) {
     <div className="bracket-scroll">
       <div className="bracket">
         {ROUND_ORDER.map((stage) => (
-          <Round key={stage} title={ROUND_TITLES[stage]} matches={byStage(stage)} isAdmin={isAdmin} />
+          <Round key={stage} title={ROUND_TITLES[stage]} stage={stage} matches={byStage(stage)} isAdmin={isAdmin} />
         ))}
       </div>
     </div>

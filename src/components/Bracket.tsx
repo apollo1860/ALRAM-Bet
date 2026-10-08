@@ -34,7 +34,7 @@ function PlayerLine({ name, isWinner, isDone }: { name: string; isWinner: boolea
 
 function MatchCard({ match, isAdmin }: { match: Match; isAdmin: boolean }) {
   const players = useStore((s) => s.players);
-  const enterKnockoutResult = useStore((s) => s.enterKnockoutResult);
+  const enterMatchResult = useStore((s) => s.enterMatchResult);
   const nameA = playerName(players, match.playerAId);
   const nameB = playerName(players, match.playerBId);
   const ready = match.playerAId && match.playerBId;
@@ -50,7 +50,7 @@ function MatchCard({ match, isAdmin }: { match: Match; isAdmin: boolean }) {
           {match.scoreA}:{match.scoreB}
         </div>
       ) : ready && isAdmin ? (
-        <ResultForm onSubmit={(a, b) => enterKnockoutResult(match.id, a, b)} />
+        <ResultForm onSubmit={(a, b) => enterMatchResult(match.id, a, b)} />
       ) : (
         <div className="hint">{ready ? 'offen' : 'wartet auf Gegner'}</div>
       )}
@@ -70,22 +70,36 @@ function Round({ title, matches, isAdmin }: { title: string; matches: Match[]; i
   );
 }
 
+const ROUND_TITLES: Record<MatchStage, string> = {
+  'wb-r1': 'Gewinner R1',
+  'wb-r2': 'Gewinner HF',
+  'wb-r3': 'Gewinner Finale',
+  'lb-r1': 'Verlierer R1',
+  'lb-r2': 'Verlierer R2',
+  'lb-r3': 'Verlierer HF',
+  'lb-r4': 'Verlierer Finale',
+  gf: 'Grand Final',
+};
+
+const ROUND_ORDER: MatchStage[] = ['wb-r1', 'wb-r2', 'wb-r3', 'lb-r1', 'lb-r2', 'lb-r3', 'lb-r4', 'gf'];
+
 export function Bracket({ isAdmin }: { isAdmin: boolean }) {
   const matches = useStore((s) => s.matches);
   const phase = useStore((s) => s.phase);
 
-  if (phase === 'setup' || phase === 'group') {
-    return <p className="hint">Die K.O.-Runde wird nach der Gruppenphase aus den Plätzen 1-4 jeder Gruppe ausgelost.</p>;
+  if (phase === 'setup') {
+    return <p className="hint">Die Bracket-Auslosung läuft noch im Setup-Schritt oben in diesem Tab.</p>;
   }
 
-  const byStage = (stage: MatchStage) => matches.filter((m) => m.stage === stage);
+  const byStage = (stage: MatchStage) =>
+    matches.filter((m) => m.stage === stage && (stage !== 'gf' || m.slot === 'GF1' || m.playerAId));
 
   return (
     <div className="bracket-scroll">
       <div className="bracket">
-        <Round title="Viertelfinale" matches={byStage('qf')} isAdmin={isAdmin} />
-        <Round title="Halbfinale" matches={byStage('sf')} isAdmin={isAdmin} />
-        <Round title="Finale" matches={byStage('final')} isAdmin={isAdmin} />
+        {ROUND_ORDER.map((stage) => (
+          <Round key={stage} title={ROUND_TITLES[stage]} matches={byStage(stage)} isAdmin={isAdmin} />
+        ))}
       </div>
     </div>
   );

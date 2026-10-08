@@ -1,9 +1,6 @@
-export type GroupId = 'A' | 'B';
-
 export interface Player {
   id: string;
   name: string;
-  group: GroupId;
   /** Decimal odds for overall tournament win, as entered by the admin before the tournament. */
   initialOdds: number;
   /** log-odds rating derived from initialOdds, fixed for the whole tournament. */
@@ -13,18 +10,23 @@ export interface Player {
   eliminated: boolean;
 }
 
-export type MatchStage = 'group' | 'qf' | 'sf' | 'final';
+/**
+ * Round columns of the 8-player double-elimination bracket.
+ * wb = winners bracket, lb = losers bracket, gf = grand final.
+ */
+export type MatchStage = 'wb-r1' | 'wb-r2' | 'wb-r3' | 'lb-r1' | 'lb-r2' | 'lb-r3' | 'lb-r4' | 'gf';
 
 export interface Match {
   id: string;
   stage: MatchStage;
-  groupId?: GroupId;
-  /** Slot label used to wire bracket winners into the next round, e.g. "QF1". */
-  slot?: string;
+  /** Slot label used to wire bracket winners/losers into the next round, e.g. "WB1". */
+  slot: string;
   playerAId: string | null;
   playerBId: string | null;
-  /** Slots this match's winner feeds into, e.g. { winnerTo: 'SF1', asSlot: 'A' }. null (not just omitted) so it serializes cleanly to Firebase, which rejects undefined values. */
+  /** Where this match's winner goes next, e.g. { matchSlot: 'WB5', as: 'A' }. null (not just omitted) so it serializes cleanly to Firebase, which rejects undefined values. */
   winnerTo: { matchSlot: string; as: 'A' | 'B' } | null;
+  /** Where this match's loser drops to in the losers bracket - only set for winners-bracket matches. */
+  loserTo: { matchSlot: string; as: 'A' | 'B' } | null;
   scoreA: number | null;
   scoreB: number | null;
   winnerId: string | null;
@@ -58,7 +60,7 @@ export interface Transaction {
   note?: string;
 }
 
-export type Phase = 'setup' | 'group' | 'knockout' | 'done';
+export type Phase = 'setup' | 'knockout' | 'done';
 
 /**
  * The slice of app state that's shared across devices in a multi-device
@@ -67,6 +69,8 @@ export type Phase = 'setup' | 'group' | 'knockout' | 'done';
  */
 export interface SyncedState {
   players: Player[];
+  /** Which fixed player sits in each of the 8 bracket slots, in draw order - editable by the admin until the bracket is started. */
+  seedSlots: string[];
   matches: Match[];
   wallets: Record<string, number>;
   transactions: Transaction[];

@@ -3,11 +3,12 @@ import { db } from '../firebase';
 import { useStore, freshSyncedState } from '../store/useStore';
 import type { Player, SyncedState } from '../types';
 
-const SYNCED_KEYS = ['players', 'matches', 'wallets', 'transactions', 'bets', 'phase'] as const;
+const SYNCED_KEYS = ['players', 'seedSlots', 'matches', 'wallets', 'transactions', 'bets', 'phase'] as const;
 
 function pickSynced(state: ReturnType<typeof useStore.getState>): SyncedState {
   return {
     players: state.players,
+    seedSlots: state.seedSlots,
     matches: state.matches,
     wallets: state.wallets,
     transactions: state.transactions,
@@ -24,6 +25,7 @@ function normalizeSyncedState(raw: Partial<SyncedState> | null): SyncedState {
   const fresh = freshSyncedState();
   return {
     players: raw?.players ?? fresh.players,
+    seedSlots: raw?.seedSlots ?? fresh.seedSlots,
     matches: raw?.matches ?? [],
     wallets: raw?.wallets ?? fresh.wallets,
     transactions: raw?.transactions ?? [],

@@ -1,4 +1,5 @@
 import { useStore } from '../store/useStore';
+import { getChampion } from '../lib/bracket';
 import { computeFinalPayout } from '../lib/payout';
 import { fmtCoins, fmtEuro, playerName } from '../lib/format';
 
@@ -9,8 +10,7 @@ export function Payout() {
   const phase = useStore((s) => s.phase);
   const matches = useStore((s) => s.matches);
 
-  const finalMatch = matches.find((m) => m.stage === 'final');
-  const champion = finalMatch?.status === 'finished' ? finalMatch.winnerId : null;
+  const champion = getChampion(matches);
 
   const { totalPot, rows } = computeFinalPayout(players, wallets, transactions);
   const sortedRows = [...rows].sort((a, b) => b.payout - a.payout);

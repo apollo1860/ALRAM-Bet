@@ -4,7 +4,7 @@ import { useAppMode } from './store/useAppMode';
 import { ModeSelect } from './components/ModeSelect';
 import { PlayerSwitcher } from './components/PlayerSwitcher';
 import { Setup } from './components/Setup';
-import { GroupStage } from './components/GroupStage';
+import { Seeding } from './components/Seeding';
 import { Bracket } from './components/Bracket';
 import { Betting } from './components/Betting';
 import { Wallet } from './components/Wallet';
@@ -15,11 +15,10 @@ import { ADMIN_ID } from './lib/format';
 // keep them out of the bundle everyone downloads for single-device use.
 const RoomGate = lazy(() => import('./components/RoomGate').then((m) => ({ default: m.RoomGate })));
 
-type Tab = 'setup' | 'group' | 'knockout' | 'betting' | 'wallet' | 'payout';
+type Tab = 'setup' | 'knockout' | 'betting' | 'wallet' | 'payout';
 
 const TABS: { id: Tab; label: string; icon: string }[] = [
   { id: 'setup', label: 'Setup', icon: '⚙️' },
-  { id: 'group', label: 'Gruppe', icon: '📋' },
   { id: 'knockout', label: 'K.O.', icon: '🏆' },
   { id: 'betting', label: 'Wetten', icon: '💰' },
   { id: 'wallet', label: 'Konto', icon: '👤' },
@@ -43,6 +42,7 @@ function ConnectionBar() {
 function MainApp({ isMulti }: { isMulti: boolean }) {
   const [tab, setTab] = useState<Tab>('setup');
   const activePlayerId = useStore((s) => s.activePlayerId);
+  const phase = useStore((s) => s.phase);
   const isAdmin = activePlayerId === ADMIN_ID;
   const bettorId = isAdmin ? null : activePlayerId;
 
@@ -56,8 +56,7 @@ function MainApp({ isMulti }: { isMulti: boolean }) {
       <main>
         {isMulti && <ConnectionBar />}
         {tab === 'setup' && <Setup isAdmin={isAdmin} />}
-        {tab === 'group' && <GroupStage isAdmin={isAdmin} />}
-        {tab === 'knockout' && <Bracket isAdmin={isAdmin} />}
+        {tab === 'knockout' && (phase === 'setup' ? <Seeding isAdmin={isAdmin} /> : <Bracket isAdmin={isAdmin} />)}
         {tab === 'betting' && <Betting bettorId={bettorId} isAdmin={isAdmin} />}
         {tab === 'wallet' && <Wallet playerId={bettorId} />}
         {tab === 'payout' && <Payout />}

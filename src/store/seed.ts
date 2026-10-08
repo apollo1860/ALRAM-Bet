@@ -1,24 +1,31 @@
-import type { GroupId, Player } from '../types';
+import type { Player } from '../types';
 import { ratingFromDecimalOdds } from '../lib/odds';
 
-const PLAYERS_PER_GROUP = 5;
-const DEFAULT_ODDS = 2;
+interface SeedPlayer {
+  name: string;
+  odds: number;
+}
 
-/**
- * Blank starting roster for a new tournament: generic placeholder names and
- * a neutral title-win odds for everyone, split evenly into the two groups.
- * The admin fills in real names and quotes by hand in the Setup tab before
- * starting the group stage.
- */
+// The 8 players who qualified for the double-elimination bracket, with
+// their fixed starting title odds.
+const SEED: SeedPlayer[] = [
+  { name: 'Felix', odds: 1.45 },
+  { name: 'Robin', odds: 1.95 },
+  { name: 'Philippe', odds: 1.52 },
+  { name: 'Anton', odds: 2.3 },
+  { name: 'Julia', odds: 20 },
+  { name: 'Feli', odds: 30 },
+  { name: 'Vitus', odds: 15 },
+  { name: 'Anna', odds: 30 },
+];
+
 export function buildDefaultPlayers(): Player[] {
-  const rating = ratingFromDecimalOdds(DEFAULT_ODDS);
-  return Array.from({ length: PLAYERS_PER_GROUP * 2 }, (_, i) => {
-    const group: GroupId = i < PLAYERS_PER_GROUP ? 'A' : 'B';
+  return SEED.map((s) => {
+    const rating = ratingFromDecimalOdds(s.odds);
     return {
-      id: `spieler-${i + 1}`,
-      name: `Spieler ${i + 1}`,
-      group,
-      initialOdds: DEFAULT_ODDS,
+      id: s.name.toLowerCase(),
+      name: s.name,
+      initialOdds: s.odds,
       baseRating: rating,
       currentRating: rating,
       eliminated: false,

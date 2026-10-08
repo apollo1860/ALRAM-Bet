@@ -1,13 +1,14 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { Bet, Match, Phase, Player, SyncedState, Transaction } from '../types';
-import { buildTournamentSchedule, buildKnockoutMatches, computeStandings, isGroupStageComplete } from '../lib/bracket';
+import { buildDoubleEliminationBracket, isWinnersBracketStage } from '../lib/bracket';
 import { poolOdds, updateRating, winProbability } from '../lib/odds';
 import { buildDefaultPlayers } from './seed';
 import { ADMIN_ID } from '../lib/format';
 
 interface State {
   players: Player[];
+  seedSlots: string[];
   matches: Match[];
   wallets: Record<string, number>;
   transactions: Transaction[];
@@ -16,11 +17,11 @@ interface State {
   phase: Phase;
 
   setActivePlayer: (id: string | null) => void;
-  updatePlayer: (id: string, patch: Partial<Pick<Player, 'name' | 'group' | 'initialOdds'>>) => void;
-  startGroupStage: () => void;
-  enterGroupResult: (matchId: string, scoreA: number, scoreB: number) => void;
-  startKnockoutStage: () => void;
-  enterKnockoutResult: (matchId: string, scoreA: number, scoreB: number) => void;
+  updatePlayer: (id: string, patch: Partial<Pick<Player, 'name' | 'initialOdds'>>) => void;
+  setSeedSlot: (index: number, playerId: string) => void;
+  /** Build the double-elimination bracket from the current seed slots. Returns an error message, or null on success. */
+  startBracket: () => string | null;
+  enterMatchResult: (matchId: string, scoreA: number, scoreB: number) => void;
   lockMatch: (matchId: string) => void;
   depositCoins: (playerId: string, amount: number) => void;
   placeBet: (matchId: string, bettorId: string, pickedPlayerId: string, amount: number) => string | null;
@@ -42,6 +43,7 @@ export function freshSyncedState(): SyncedState {
   const players = buildDefaultPlayers();
   return {
     players,
+    seedSlots: players.map((p) => p.id),
     matches: [],
     wallets: initialWallets(players),
     transactions: [],
@@ -68,6 +70,10 @@ function applyRatingUpdate(players: Player[], winnerId: string, loserId: string)
   });
 }
 
+function markEliminated(players: Player[], loserId: string): Player[] {
+  return players.map((p) => (p.id === loserId ? { ...p, eliminated: true } : p));
+}
+
 /** Fill in a fair win-probability snapshot for every match that now has both players but no snapshot yet. */
 function stampFairProbs(players: Player[], matches: Match[]): Match[] {
   return matches.map((m) => {
@@ -92,6 +98,26 @@ function propagateWinner(matches: Match[], finished: Match): Match[] {
   });
 }
 
+/** Push a finished winners-bracket match's loser down into its losers-bracket slot. */
+function propagateLoser(matches: Match[], finished: Match): Match[] {
+  if (!finished.loserTo || !finished.winnerId) return matches;
+  const loserId = finished.winnerId === finished.playerAId ? finished.playerBId : finished.playerAId;
+  if (!loserId) return matches;
+  const { matchSlot, as } = finished.loserTo;
+  return matches.map((m) => {
+    if (m.slot !== matchSlot) return m;
+    const patch = as === 'A' ? { playerAId: loserId } : { playerBId: loserId };
+    const merged = { ...m, ...patch };
+    const bothFilled = !!merged.playerAId && !!merged.playerBId;
+    return { ...merged, status: bothFilled ? ('ready' as const) : m.status };
+  });
+}
+
+/** LB-side won GF1: the undefeated WB side now has one loss, so a decisive rematch is required. */
+function activateGrandFinalReset(matches: Match[], aId: string, bId: string): Match[] {
+  return matches.map((m) => (m.slot === 'GF2' ? { ...m, playerAId: aId, playerBId: bId, status: 'ready' as const } : m));
+}
+
 export const useStore = create<State>()(
   persist(
     (set, get) => ({
@@ -104,64 +130,63 @@ export const useStore = create<State>()(
           players: state.players.map((p) => (p.id === id ? { ...p, ...patch } : p)),
         })),
 
-      startGroupStage: () => {
-        const { players } = get();
-        const groupA = players.filter((p) => p.group === 'A').map((p) => p.id);
-        const groupB = players.filter((p) => p.group === 'B').map((p) => p.id);
-        const matches = buildTournamentSchedule(groupA, groupB);
-        set({ matches: stampFairProbs(players, matches), phase: 'group' });
+      setSeedSlot: (index, playerId) =>
+        set((state) => {
+          const seedSlots = [...state.seedSlots];
+          seedSlots[index] = playerId;
+          return { seedSlots };
+        }),
+
+      startBracket: () => {
+        const { players, seedSlots } = get();
+        const validIds = new Set(players.map((p) => p.id));
+        const distinct = new Set(seedSlots);
+        if (seedSlots.length !== players.length || distinct.size !== players.length || seedSlots.some((id) => !validIds.has(id))) {
+          return 'Jede der 8 Positionen braucht genau einen, jeweils anderen Spieler.';
+        }
+        const matches = buildDoubleEliminationBracket(seedSlots);
+        set({ matches: stampFairProbs(players, matches), phase: 'knockout' });
+        return null;
       },
 
-      enterGroupResult: (matchId, scoreA, scoreB) => {
+      enterMatchResult: (matchId, scoreA, scoreB) => {
         const { matches, players } = get();
         const match = matches.find((m) => m.id === matchId);
         if (!match || !match.playerAId || !match.playerBId) return;
         const winnerId = scoreA > scoreB ? match.playerAId : match.playerBId;
         const loserId = scoreA > scoreB ? match.playerBId : match.playerAId;
-        const updatedPlayers = applyRatingUpdate(players, winnerId, loserId);
-        const updatedMatches = matches.map((m) =>
-          m.id === matchId ? { ...m, scoreA, scoreB, winnerId, status: 'finished' as const } : m
-        );
-        const finished = updatedMatches.find((m) => m.id === matchId)!;
-        set({ players: updatedPlayers, matches: stampFairProbs(updatedPlayers, updatedMatches) });
-        get()._resolveBetsFor(matchId, winnerId, finished);
-      },
 
-      startKnockoutStage: () => {
-        const { players, matches } = get();
-        if (!isGroupStageComplete('A', matches) || !isGroupStageComplete('B', matches)) return;
-        const standingsA = computeStandings('A', players, matches);
-        const standingsB = computeStandings('B', players, matches);
-        const eliminatedIds = new Set([
-          standingsA.find((r) => r.rank === 5)?.playerId,
-          standingsB.find((r) => r.rank === 5)?.playerId,
-        ]);
-        const knockout = buildKnockoutMatches(standingsA, standingsB);
-        const updatedPlayers = players.map((p) => (eliminatedIds.has(p.id) ? { ...p, eliminated: true } : p));
-        const allMatches = stampFairProbs(updatedPlayers, [...matches, ...knockout]);
-        set({ players: updatedPlayers, matches: allMatches, phase: 'knockout' });
-      },
-
-      enterKnockoutResult: (matchId, scoreA, scoreB) => {
-        const { matches, players } = get();
-        const match = matches.find((m) => m.id === matchId);
-        if (!match || !match.playerAId || !match.playerBId) return;
-        const winnerId = scoreA > scoreB ? match.playerAId : match.playerBId;
-        const loserId = scoreA > scoreB ? match.playerBId : match.playerAId;
-        const updatedPlayers = applyRatingUpdate(players, winnerId, loserId).map((p) =>
-          p.id === loserId ? { ...p, eliminated: true } : p
-        );
+        let updatedPlayers = applyRatingUpdate(players, winnerId, loserId);
         let updatedMatches = matches.map((m) =>
           m.id === matchId ? { ...m, scoreA, scoreB, winnerId, status: 'finished' as const } : m
         );
         const finished = updatedMatches.find((m) => m.id === matchId)!;
+
         updatedMatches = propagateWinner(updatedMatches, finished);
+        updatedMatches = propagateLoser(updatedMatches, finished);
+
+        let phase: Phase = 'knockout';
+        if (finished.slot === 'GF1') {
+          if (winnerId === finished.playerAId) {
+            // undefeated winners-bracket side took it outright - tournament over
+            updatedPlayers = markEliminated(updatedPlayers, loserId);
+            phase = 'done';
+          } else {
+            // losers-bracket side won - the WB side has only one loss, so a decisive rematch is required
+            updatedMatches = activateGrandFinalReset(updatedMatches, finished.playerAId!, finished.playerBId!);
+          }
+        } else if (finished.slot === 'GF2') {
+          updatedPlayers = markEliminated(updatedPlayers, loserId);
+          phase = 'done';
+        } else if (!isWinnersBracketStage(finished.stage)) {
+          // losers-bracket loss is a second loss - eliminated outright
+          updatedPlayers = markEliminated(updatedPlayers, loserId);
+        }
+        // a winners-bracket loss drops the loser to the LB via propagateLoser above - no elimination yet
+
         updatedMatches = stampFairProbs(updatedPlayers, updatedMatches);
-        const finalMatch = updatedMatches.find((m) => m.stage === 'final');
-        const phase: Phase = finalMatch?.status === 'finished' ? 'done' : 'knockout';
         set({ players: updatedPlayers, matches: updatedMatches, phase });
 
-        // resolve bets placed on this match now that we know the winner
         get()._resolveBetsFor(matchId, winnerId, finished);
       },
 

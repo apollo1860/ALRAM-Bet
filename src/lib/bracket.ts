@@ -1,147 +1,21 @@
-import type { GroupId, Match, Player } from '../types';
+import type { Match, MatchStage } from '../types';
 
-/** Round-robin schedule (circle method) for one group, incl. a bye row if n is odd. */
-export function roundRobinRounds(playerIds: string[]): Array<Array<[string, string]>> {
-  const ids: (string | null)[] = [...playerIds];
-  if (ids.length % 2 !== 0) ids.push(null);
-  const n = ids.length;
-  const rounds: Array<Array<[string, string]>> = [];
-  const arr = [...ids];
-  for (let r = 0; r < n - 1; r++) {
-    const pairs: Array<[string, string]> = [];
-    for (let i = 0; i < n / 2; i++) {
-      const a = arr[i];
-      const b = arr[n - 1 - i];
-      if (a !== null && b !== null) pairs.push([a, b]);
-    }
-    rounds.push(pairs);
-    // rotate all but the first element
-    const fixed = arr[0];
-    const rest = arr.slice(1);
-    rest.unshift(rest.pop() as string | null);
-    arr.splice(0, arr.length, fixed, ...rest);
-  }
-  return rounds;
-}
-
-function makeGroupMatch(groupId: GroupId, seq: number, pair: [string, string]): Match {
+function makeMatch(
+  slot: string,
+  stage: MatchStage,
+  aId: string | null,
+  bId: string | null,
+  winnerTo: Match['winnerTo'],
+  loserTo: Match['loserTo']
+): Match {
   return {
-    id: `${groupId}${seq}`,
-    stage: 'group',
-    groupId,
-    slot: `${groupId}${seq}`,
-    playerAId: pair[0],
-    playerBId: pair[1],
-    winnerTo: null,
-    scoreA: null,
-    scoreB: null,
-    winnerId: null,
-    status: 'ready',
-    fairProbA: null,
-    poolA: 0,
-    poolB: 0,
-  };
-}
-
-/**
- * Full group-stage schedule for a single table: group A's and group B's
- * round-robin matches interleaved round-by-round (A, B, A, B, ...) instead
- * of playing out one group before the other, so whoever runs the one table
- * can just work down this list in order.
- */
-export function buildTournamentSchedule(groupAIds: string[], groupBIds: string[]): Match[] {
-  const roundsA = roundRobinRounds(groupAIds);
-  const roundsB = roundRobinRounds(groupBIds);
-  const numRounds = Math.max(roundsA.length, roundsB.length);
-  const matches: Match[] = [];
-  let seqA = 0;
-  let seqB = 0;
-
-  for (let r = 0; r < numRounds; r++) {
-    const pairsA = roundsA[r] ?? [];
-    const pairsB = roundsB[r] ?? [];
-    const maxLen = Math.max(pairsA.length, pairsB.length);
-    for (let i = 0; i < maxLen; i++) {
-      if (pairsA[i]) matches.push(makeGroupMatch('A', ++seqA, pairsA[i]));
-      if (pairsB[i]) matches.push(makeGroupMatch('B', ++seqB, pairsB[i]));
-    }
-  }
-  return matches;
-}
-
-export interface StandingRow {
-  playerId: string;
-  played: number;
-  wins: number;
-  losses: number;
-  pointsFor: number;
-  pointsAgainst: number;
-  diff: number;
-  rank: number;
-}
-
-export function computeStandings(groupId: GroupId, players: Player[], matches: Match[]): StandingRow[] {
-  const groupPlayers = players.filter((p) => p.group === groupId);
-  const rows = new Map<string, StandingRow>();
-  for (const p of groupPlayers) {
-    rows.set(p.id, {
-      playerId: p.id,
-      played: 0,
-      wins: 0,
-      losses: 0,
-      pointsFor: 0,
-      pointsAgainst: 0,
-      diff: 0,
-      rank: 0,
-    });
-  }
-  for (const m of matches) {
-    if (m.stage !== 'group' || m.groupId !== groupId || m.status !== 'finished') continue;
-    if (!m.playerAId || !m.playerBId || m.scoreA === null || m.scoreB === null) continue;
-    const rowA = rows.get(m.playerAId);
-    const rowB = rows.get(m.playerBId);
-    if (!rowA || !rowB) continue;
-    rowA.played++;
-    rowB.played++;
-    rowA.pointsFor += m.scoreA;
-    rowA.pointsAgainst += m.scoreB;
-    rowB.pointsFor += m.scoreB;
-    rowB.pointsAgainst += m.scoreA;
-    if (m.winnerId === m.playerAId) {
-      rowA.wins++;
-      rowB.losses++;
-    } else if (m.winnerId === m.playerBId) {
-      rowB.wins++;
-      rowA.losses++;
-    }
-  }
-  const sorted = [...rows.values()].map((r) => ({ ...r, diff: r.pointsFor - r.pointsAgainst }));
-  sorted.sort((a, b) => b.wins - a.wins || b.diff - a.diff || b.pointsFor - a.pointsFor);
-  sorted.forEach((r, i) => (r.rank = i + 1));
-  return sorted;
-}
-
-export function isGroupStageComplete(groupId: GroupId, matches: Match[]): boolean {
-  const groupMatches = matches.filter((m) => m.stage === 'group' && m.groupId === groupId);
-  return groupMatches.length > 0 && groupMatches.every((m) => m.status === 'finished');
-}
-
-/**
- * Crossover knockout bracket for the top 4 of each group:
- * QF1 A1-B4, QF2 A3-B2, QF3 B1-A4, QF4 B3-A2
- * Winners cross so group-1/2 seeds only meet in the final.
- */
-export function buildKnockoutMatches(standingsA: StandingRow[], standingsB: StandingRow[]): Match[] {
-  const a = (rank: number) => standingsA.find((r) => r.rank === rank)!.playerId;
-  const b = (rank: number) => standingsB.find((r) => r.rank === rank)!.playerId;
-
-  const blank = (id: string, slot: string, aId: string | null, bId: string | null, stage: Match['stage'], winnerTo: Match['winnerTo']): Match => ({
-    id,
+    id: slot,
     stage,
     slot,
     playerAId: aId,
     playerBId: bId,
     winnerTo,
+    loserTo,
     scoreA: null,
     scoreB: null,
     winnerId: null,
@@ -149,15 +23,67 @@ export function buildKnockoutMatches(standingsA: StandingRow[], standingsB: Stan
     fairProbA: null,
     poolA: 0,
     poolB: 0,
-  });
+  };
+}
+
+/**
+ * Standard 8-player double-elimination bracket. `seedSlots` is the admin's
+ * manual draw order (position 1..8); WB round 1 pairs them 1v2, 3v4, 5v6,
+ * 7v8. Losers of the winners bracket (WB) drop into the losers bracket
+ * (LB); losing in the LB eliminates you outright, since by construction
+ * you can only reach the LB after one loss already. The grand final (GF1)
+ * pits the undefeated WB champion against the LB champion; if the LB
+ * champion wins, a second decisive match (GF2) is required, since the WB
+ * champion would otherwise be out after a single loss - that activation is
+ * handled in the store, not here, so GF2 starts empty.
+ */
+export function buildDoubleEliminationBracket(seedSlots: string[]): Match[] {
+  const [s1, s2, s3, s4, s5, s6, s7, s8] = seedSlots;
 
   return [
-    blank('QF1', 'QF1', a(1), b(4), 'qf', { matchSlot: 'SF1', as: 'A' }),
-    blank('QF2', 'QF2', a(3), b(2), 'qf', { matchSlot: 'SF1', as: 'B' }),
-    blank('QF3', 'QF3', b(1), a(4), 'qf', { matchSlot: 'SF2', as: 'A' }),
-    blank('QF4', 'QF4', b(3), a(2), 'qf', { matchSlot: 'SF2', as: 'B' }),
-    blank('SF1', 'SF1', null, null, 'sf', { matchSlot: 'F1', as: 'A' }),
-    blank('SF2', 'SF2', null, null, 'sf', { matchSlot: 'F1', as: 'B' }),
-    blank('F1', 'F1', null, null, 'final', null),
+    // Winners bracket, round 1
+    makeMatch('WB1', 'wb-r1', s1, s2, { matchSlot: 'WB5', as: 'A' }, { matchSlot: 'LB1', as: 'A' }),
+    makeMatch('WB2', 'wb-r1', s3, s4, { matchSlot: 'WB5', as: 'B' }, { matchSlot: 'LB1', as: 'B' }),
+    makeMatch('WB3', 'wb-r1', s5, s6, { matchSlot: 'WB6', as: 'A' }, { matchSlot: 'LB2', as: 'A' }),
+    makeMatch('WB4', 'wb-r1', s7, s8, { matchSlot: 'WB6', as: 'B' }, { matchSlot: 'LB2', as: 'B' }),
+
+    // Winners bracket semis
+    makeMatch('WB5', 'wb-r2', null, null, { matchSlot: 'WB7', as: 'A' }, { matchSlot: 'LB3', as: 'B' }),
+    makeMatch('WB6', 'wb-r2', null, null, { matchSlot: 'WB7', as: 'B' }, { matchSlot: 'LB4', as: 'B' }),
+
+    // Winners bracket final
+    makeMatch('WB7', 'wb-r3', null, null, { matchSlot: 'GF1', as: 'A' }, { matchSlot: 'LB6', as: 'B' }),
+
+    // Losers bracket, round 1 (WB round-1 losers meet each other)
+    makeMatch('LB1', 'lb-r1', null, null, { matchSlot: 'LB3', as: 'A' }, null),
+    makeMatch('LB2', 'lb-r1', null, null, { matchSlot: 'LB4', as: 'A' }, null),
+
+    // Losers bracket, round 2 (round-1 LB winners meet the WB semi losers)
+    makeMatch('LB3', 'lb-r2', null, null, { matchSlot: 'LB5', as: 'A' }, null),
+    makeMatch('LB4', 'lb-r2', null, null, { matchSlot: 'LB5', as: 'B' }, null),
+
+    // Losers bracket semifinal
+    makeMatch('LB5', 'lb-r3', null, null, { matchSlot: 'LB6', as: 'A' }, null),
+
+    // Losers bracket final (meets the WB final loser)
+    makeMatch('LB6', 'lb-r4', null, null, { matchSlot: 'GF1', as: 'B' }, null),
+
+    // Grand final - GF2 (bracket reset) is only populated if the LB side wins GF1; see store.
+    makeMatch('GF1', 'gf', null, null, null, null),
+    makeMatch('GF2', 'gf', null, null, null, null),
   ];
+}
+
+/** True for any winners-bracket round: losing there drops you to the LB instead of eliminating you. */
+export function isWinnersBracketStage(stage: MatchStage): boolean {
+  return stage === 'wb-r1' || stage === 'wb-r2' || stage === 'wb-r3';
+}
+
+/** The tournament winner, if decided: GF2's winner if it was played, otherwise GF1's winner when the undefeated (slot A) side took it outright. */
+export function getChampion(matches: Match[]): string | null {
+  const gf2 = matches.find((m) => m.slot === 'GF2');
+  if (gf2?.status === 'finished') return gf2.winnerId;
+  const gf1 = matches.find((m) => m.slot === 'GF1');
+  if (gf1?.status === 'finished' && gf1.winnerId === gf1.playerAId) return gf1.winnerId;
+  return null;
 }

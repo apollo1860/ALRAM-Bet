@@ -76,7 +76,7 @@ export type Phase = 'setup' | 'knockout' | 'done';
 export interface Message {
   id: string;
   recipientId: string;
-  kind: 'welcome' | 'deposit' | 'bet-won' | 'bet-lost';
+  kind: 'welcome' | 'deposit' | 'bet-won' | 'bet-lost' | 'deposit-cancelled';
   text: string;
   createdAt: number;
   read: boolean;

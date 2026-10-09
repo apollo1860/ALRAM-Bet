@@ -1,4 +1,6 @@
-import type { Guest, Player, Transaction } from '../types';
+import { computePlacements, getChampion } from './bracket';
+import { fmtCoins, fmtEuro, playerName } from './format';
+import type { Guest, Match, Player, Transaction } from '../types';
 
 export interface PayoutRow {
   playerId: string;
@@ -77,4 +79,43 @@ export function computeFinalPayout(
   }));
 
   return { totalPot: Math.round(totalPot), rows };
+}
+
+const PLACE_LABEL: Record<number, string> = { 1: '🥇', 2: '🥈', 3: '🥉' };
+
+/**
+ * A plain-text recap of the tournament so far - placements and the payout
+ * table - meant to be shared to the group chat (via the Web Share API, or
+ * copied to the clipboard as a fallback). Works just as well mid-tournament
+ * as at the very end: placements fill in incrementally already, and the
+ * payout table is always "if it ended right now".
+ */
+export function formatResultSummary(
+  players: Player[],
+  guests: Guest[],
+  matches: Match[],
+  wallets: Record<string, number>,
+  transactions: Transaction[]
+): string {
+  const isFinal = getChampion(matches) !== null;
+  const placements = computePlacements(matches);
+  const { totalPot, rows } = computeFinalPayout(players, guests, wallets, transactions);
+  const sortedRows = [...rows].sort((a, b) => b.payout - a.payout);
+
+  const lines: string[] = [`🏓 ALRAM BET - ${isFinal ? 'Endergebnis' : 'Zwischenstand'}`, ''];
+
+  if (placements.length > 0) {
+    lines.push('Platzierungen:');
+    for (const row of placements) {
+      lines.push(`${PLACE_LABEL[row.place] ?? `${row.place}.`} ${playerName(players, row.playerId, guests)}`);
+    }
+    lines.push('');
+  }
+
+  lines.push(`💰 Abrechnung (Gesamttopf: ${fmtEuro(totalPot)}):`);
+  for (const row of sortedRows) {
+    lines.push(`${playerName(players, row.playerId, guests)}: ${fmtCoins(row.finalCoins)} → ${fmtEuro(row.payout)}`);
+  }
+
+  return lines.join('\n');
 }

@@ -1,6 +1,7 @@
+import { useState } from 'react';
 import { useStore } from '../store/useStore';
 import { getChampion } from '../lib/bracket';
-import { computeFinalPayout } from '../lib/payout';
+import { computeFinalPayout, formatResultSummary } from '../lib/payout';
 import { fmtCoins, fmtEuro, playerName } from '../lib/format';
 
 export function Payout() {
@@ -10,6 +11,7 @@ export function Payout() {
   const transactions = useStore((s) => s.transactions);
   const phase = useStore((s) => s.phase);
   const matches = useStore((s) => s.matches);
+  const [shareStatus, setShareStatus] = useState<'idle' | 'copied' | 'error'>('idle');
 
   const champion = getChampion(matches);
 
@@ -21,6 +23,27 @@ export function Payout() {
   const { totalPot, rows } = computeFinalPayout(players, activeGuests, wallets, transactions);
   const sortedRows = [...rows].sort((a, b) => b.payout - a.payout);
   const sumPayout = rows.reduce((a, r) => a + r.payout, 0);
+
+  async function handleShare() {
+    const text = formatResultSummary(players, activeGuests, matches, wallets, transactions);
+    const nav = navigator as Navigator & { share?: (data: ShareData) => Promise<void> };
+    if (nav.share) {
+      try {
+        await nav.share({ title: 'ALRAM Bet Ergebnis', text });
+      } catch {
+        // the user closed the share sheet without picking anything - not worth surfacing as an error
+      }
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(text);
+      setShareStatus('copied');
+      setTimeout(() => setShareStatus('idle'), 2500);
+    } catch {
+      setShareStatus('error');
+      setTimeout(() => setShareStatus('idle'), 2500);
+    }
+  }
 
   return (
     <div className="card">
@@ -45,6 +68,11 @@ export function Payout() {
         größeren Anteil vom echten eingezahlten Geld. Auszahlungen sind ganze Zahlen und summieren sich exakt auf
         den Gesamttopf.
       </p>
+      <button className="button-secondary" onClick={handleShare}>
+        📤 Ergebnis teilen
+      </button>
+      {shareStatus === 'copied' && <p className="hint">In die Zwischenablage kopiert ✓</p>}
+      {shareStatus === 'error' && <p className="error">Konnte nicht kopiert werden.</p>}
       <table className="table stack">
         <thead>
           <tr>

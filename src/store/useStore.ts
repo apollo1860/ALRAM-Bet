@@ -44,6 +44,10 @@ interface State {
   correctMatchResult: (matchId: string) => string | null;
   lockMatch: (matchId: string) => void;
   depositCoins: (playerId: string, amount: number) => void;
+  /** Admin-only: void a deposit that was entered wrong (typo'd amount, wrong person) - reverses the
+   *  wallet credit and removes it from the ledger entirely, as if it never happened. Clamps at 0
+   *  instead of going negative if the money's already been spent. Returns an error, or null on success. */
+  cancelDeposit: (transactionId: string) => string | null;
   placeBet: (matchId: string, bettorId: string, pickedPlayerId: string, amount: number) => string | null;
   resetTournament: () => void;
   /** Replace the shared slice of state with data received from a multi-device room, leaving activePlayerId untouched. */
@@ -298,6 +302,30 @@ export const useStore = create<State>()(
             messages: [...state.messages, ...notifications],
           };
         });
+      },
+
+      cancelDeposit: (transactionId) => {
+        const state = get();
+        const tx = state.transactions.find((t) => t.id === transactionId);
+        if (!tx || tx.type !== 'deposit') return 'Einzahlung nicht gefunden.';
+
+        const currentBalance = state.wallets[tx.playerId] ?? 0;
+        const newBalance = Math.max(0, currentBalance - tx.amount);
+        const note =
+          newBalance === currentBalance - tx.amount
+            ? createMessage(tx.playerId, 'deposit-cancelled', `⚠️ Deine Einzahlung von ${fmtCoins(tx.amount)} wurde vom Admin storniert.`)
+            : createMessage(
+                tx.playerId,
+                'deposit-cancelled',
+                `⚠️ Deine Einzahlung von ${fmtCoins(tx.amount)} wurde vom Admin storniert. Da du inzwischen Coins ausgegeben hast, steht dein Konto jetzt bei 0 statt im Minus.`
+              );
+
+        set({
+          wallets: { ...state.wallets, [tx.playerId]: newBalance },
+          transactions: state.transactions.filter((t) => t.id !== transactionId),
+          messages: [...state.messages, note],
+        });
+        return null;
       },
 
       placeBet: (matchId, bettorId, pickedPlayerId, amount) => {

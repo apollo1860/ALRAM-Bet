@@ -6,13 +6,17 @@ function DepositLog() {
   const players = useStore((s) => s.players);
   const guests = useStore((s) => s.guests);
   const transactions = useStore((s) => s.transactions);
+  const cancelDeposit = useStore((s) => s.cancelDeposit);
 
   const deposits = transactions.filter((t) => t.type === 'deposit').sort((a, b) => b.createdAt - a.createdAt);
 
   return (
     <div className="card">
       <h2>Einzahlungs-Logbuch</h2>
-      <p className="hint">Nur für dich als Admin sichtbar: wer wann wie viele Coins eingezahlt hat.</p>
+      <p className="hint">
+        Nur für dich als Admin sichtbar: wer wann wie viele Coins eingezahlt hat. Eine falsch eingetragene
+        Einzahlung kannst du hier stornieren - das Konto wird um den Betrag zurückgebucht.
+      </p>
       {deposits.length === 0 ? (
         <p className="hint">Noch keine Einzahlungen.</p>
       ) : (
@@ -22,6 +26,7 @@ function DepositLog() {
               <th>Zeitpunkt</th>
               <th>Person</th>
               <th>Betrag</th>
+              <th></th>
             </tr>
           </thead>
           <tbody>
@@ -30,6 +35,18 @@ function DepositLog() {
                 <td data-label="Zeitpunkt">{new Date(t.createdAt).toLocaleString('de-DE')}</td>
                 <td data-label="Person">{playerName(players, t.playerId, guests)}</td>
                 <td data-label="Betrag">{fmtCoins(t.amount)}</td>
+                <td data-label="">
+                  <button
+                    className="button-secondary deposit-cancel-btn"
+                    onClick={() =>
+                      confirm(
+                        `Einzahlung von ${fmtCoins(t.amount)} (${playerName(players, t.playerId, guests)}) wirklich stornieren?`
+                      ) && cancelDeposit(t.id)
+                    }
+                  >
+                    Stornieren
+                  </button>
+                </td>
               </tr>
             ))}
           </tbody>

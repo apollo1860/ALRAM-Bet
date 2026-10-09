@@ -26,9 +26,10 @@ function OddsBox({
   );
 }
 
-function BetRow({ match, bettorId }: { match: Match; bettorId: string }) {
+function MatchRow({ match, bettorId, isAdmin }: { match: Match; bettorId: string | null; isAdmin: boolean }) {
   const players = useStore((s) => s.players);
   const placeBet = useStore((s) => s.placeBet);
+  const lockMatch = useStore((s) => s.lockMatch);
   const [amount, setAmount] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [side, setSide] = useState<'A' | 'B'>('A');
@@ -36,10 +37,12 @@ function BetRow({ match, bettorId }: { match: Match; bettorId: string }) {
   const fairProbA = match.fairProbA ?? 0.5;
   const oddsA = poolOdds(match.poolA, match.poolB, fairProbA);
   const oddsB = poolOdds(match.poolB, match.poolA, 1 - fairProbA);
-  const isOwnMatch = bettorId === match.playerAId || bettorId === match.playerBId;
+  const isOwnMatch = bettorId !== null && (bettorId === match.playerAId || bettorId === match.playerBId);
+  const canBet = bettorId !== null && !isOwnMatch && match.status === 'ready';
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!bettorId) return;
     setError(null);
     const picked = side === 'A' ? match.playerAId : match.playerBId;
     if (!picked) return;
@@ -61,22 +64,21 @@ function BetRow({ match, bettorId }: { match: Match; bettorId: string }) {
           name={playerName(players, match.playerAId)}
           odds={oddsA}
           pool={match.poolA}
-          selected={side === 'A'}
-          onClick={() => setSide('A')}
+          selected={canBet && side === 'A'}
+          onClick={canBet ? () => setSide('A') : undefined}
         />
         <OddsBox
           name={playerName(players, match.playerBId)}
           odds={oddsB}
           pool={match.poolB}
-          selected={side === 'B'}
-          onClick={() => setSide('B')}
+          selected={canBet && side === 'B'}
+          onClick={canBet ? () => setSide('B') : undefined}
         />
       </div>
-      {isOwnMatch ? (
-        <p className="hint">Du spielst selbst in diesem Match – keine Wette möglich.</p>
-      ) : match.status !== 'ready' ? (
-        <p className="hint">Wetten geschlossen.</p>
-      ) : (
+
+      {bettorId !== null && isOwnMatch && <p className="hint">Du spielst selbst in diesem Match – keine Wette möglich.</p>}
+      {bettorId !== null && !isOwnMatch && match.status !== 'ready' && <p className="hint">Wetten geschlossen.</p>}
+      {canBet && (
         <form className="bet-form" onSubmit={submit}>
           <input
             type="number"
@@ -92,33 +94,16 @@ function BetRow({ match, bettorId }: { match: Match; bettorId: string }) {
         </form>
       )}
       {error && <p className="error">{error}</p>}
-    </div>
-  );
-}
 
-function AdminMatchRow({ match }: { match: Match }) {
-  const players = useStore((s) => s.players);
-  const lockMatch = useStore((s) => s.lockMatch);
-  const fairProbA = match.fairProbA ?? 0.5;
-  const oddsA = poolOdds(match.poolA, match.poolB, fairProbA);
-  const oddsB = poolOdds(match.poolB, match.poolA, 1 - fairProbA);
-
-  return (
-    <div className="card bet-card">
-      <div className="bet-header">
-        <span>
-          {playerName(players, match.playerAId)} <em>vs</em> {playerName(players, match.playerBId)}
-        </span>
-        <span className={`pill ${match.status === 'live' ? 'live' : ''}`}>{match.status === 'live' ? 'läuft' : 'offen'}</span>
-      </div>
-      <div className="odds-row">
-        <OddsBox name={playerName(players, match.playerAId)} odds={oddsA} pool={match.poolA} />
-        <OddsBox name={playerName(players, match.playerBId)} odds={oddsB} pool={match.poolB} />
-      </div>
-      {match.status === 'ready' ? (
-        <button onClick={() => lockMatch(match.id)}>Wetten schließen &amp; Spiel starten</button>
-      ) : (
-        <p className="hint">Wetten geschlossen – Ergebnis nach dem Spiel im Gruppen- bzw. K.O.-Tab eintragen.</p>
+      {isAdmin && match.status === 'ready' && (
+        <div className="admin-lock-row">
+          <button className="button-secondary" onClick={() => lockMatch(match.id)}>
+            Wetten schließen &amp; Spiel starten
+          </button>
+        </div>
+      )}
+      {isAdmin && bettorId === null && match.status !== 'ready' && (
+        <p className="hint">Wetten geschlossen – Ergebnis im Gruppen- bzw. K.O.-Tab eintragen.</p>
       )}
     </div>
   );
@@ -138,9 +123,9 @@ export function Betting({ bettorId, isAdmin }: { bettorId: string | null; isAdmi
 
   return (
     <div className="bet-list">
-      {isAdmin
-        ? open.map((m) => <AdminMatchRow key={m.id} match={m} />)
-        : open.map((m) => <BetRow key={m.id} match={m} bettorId={bettorId as string} />)}
+      {open.map((m) => (
+        <MatchRow key={m.id} match={m} bettorId={bettorId} isAdmin={isAdmin} />
+      ))}
     </div>
   );
 }

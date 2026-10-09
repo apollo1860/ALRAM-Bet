@@ -19,6 +19,10 @@ import { createMessage, WELCOME_TEXT } from '../lib/messages';
 interface State {
   players: Player[];
   guests: Guest[];
+  /** Player ids already claimed by some device in this room - see lib/roomSync.ts's claimPlayerInRoom,
+   *  which writes this directly to Firebase before a device joins, for the same race-avoidance reasons
+   *  guests are written there instead of through this store's normal actions. */
+  claimedPlayerIds: string[];
   seedSlots: string[];
   matches: Match[];
   wallets: Record<string, number>;
@@ -77,6 +81,7 @@ export function freshSyncedState(): SyncedState {
   return {
     players,
     guests: [],
+    claimedPlayerIds: [],
     seedSlots: defaultSeedSlots(players),
     matches: [],
     wallets: initialWallets(players),

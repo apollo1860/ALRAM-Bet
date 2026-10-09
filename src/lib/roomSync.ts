@@ -8,6 +8,7 @@ import type { Guest, Message, Player, SyncedState } from '../types';
 const SYNCED_KEYS = [
   'players',
   'guests',
+  'claimedPlayerIds',
   'seedSlots',
   'matches',
   'wallets',
@@ -21,6 +22,7 @@ function pickSynced(state: ReturnType<typeof useStore.getState>): SyncedState {
   return {
     players: state.players,
     guests: state.guests,
+    claimedPlayerIds: state.claimedPlayerIds,
     seedSlots: state.seedSlots,
     matches: state.matches,
     wallets: state.wallets,
@@ -40,6 +42,7 @@ function normalizeSyncedState(raw: Partial<SyncedState> | null): SyncedState {
   return {
     players: raw?.players ?? fresh.players,
     guests: raw?.guests ?? [],
+    claimedPlayerIds: raw?.claimedPlayerIds ?? [],
     seedSlots: raw?.seedSlots ?? fresh.seedSlots,
     matches: raw?.matches ?? [],
     wallets: raw?.wallets ?? fresh.wallets,
@@ -79,6 +82,29 @@ export async function roomExists(code: string): Promise<boolean> {
 export async function getRoomPlayers(code: string): Promise<Player[]> {
   const snap = await withTimeout(get(ref(db, `rooms/${code}/players`)));
   return (snap.val() as Player[] | null) ?? [];
+}
+
+/** Read which player ids some device has already claimed as its identity in this room. */
+export async function getRoomClaims(code: string): Promise<string[]> {
+  const snap = await withTimeout(get(ref(db, `rooms/${code}/claimedPlayerIds`)));
+  return (snap.val() as string[] | null) ?? [];
+}
+
+/**
+ * Claim a player identity for this device, straight in Firebase and ahead of
+ * `setRoomCode` for the same reason guests are added there instead of
+ * through the store - the very first room snapshot this device applies
+ * would otherwise wipe out a claim that only existed locally. Re-checks
+ * right before writing and throws if someone else grabbed the same player
+ * in the meantime, so two devices can't both end up as the same person.
+ */
+export async function claimPlayerInRoom(code: string, playerId: string): Promise<void> {
+  const snap = await withTimeout(get(ref(db, `rooms/${code}/claimedPlayerIds`)));
+  const existing = (snap.val() as string[] | null) ?? [];
+  if (existing.includes(playerId)) {
+    throw new Error('Diese Person wurde inzwischen schon von jemand anderem ausgewählt.');
+  }
+  await withTimeout(dbSet(ref(db, `rooms/${code}/claimedPlayerIds`), [...existing, playerId]));
 }
 
 /** Create a brand new room, starting from a fresh (unstarted) tournament. */

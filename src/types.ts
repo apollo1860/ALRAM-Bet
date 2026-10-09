@@ -91,6 +91,9 @@ export interface SyncedState {
   players: Player[];
   /** Guests who only bet, never play - added on demand, not part of the fixed roster. */
   guests: Guest[];
+  /** Player ids a device has already claimed as its own identity when joining this room - once
+   *  claimed, nobody else can pick that player, so two devices never end up as the same person. */
+  claimedPlayerIds: string[];
   /** Which fixed player sits in each of the 8 bracket slots, in draw order - editable by the admin until the bracket is started. */
   seedSlots: string[];
   matches: Match[];

@@ -1,7 +1,15 @@
 import { useState } from 'react';
 import { useAppMode } from '../store/useAppMode';
 import { useStore } from '../store/useStore';
-import { addGuestToRoom, createRoomDoc, generateRoomCode, getRoomPlayers, roomExists } from '../lib/roomSync';
+import {
+  addGuestToRoom,
+  claimPlayerInRoom,
+  createRoomDoc,
+  generateRoomCode,
+  getRoomClaims,
+  getRoomPlayers,
+  roomExists,
+} from '../lib/roomSync';
 import type { Player } from '../types';
 
 type Screen = 'choice' | 'create' | 'join-code' | 'identity';
@@ -18,6 +26,7 @@ export function RoomGate() {
   const [enteringAsAdmin, setEnteringAsAdmin] = useState(false);
   const [joinInput, setJoinInput] = useState('');
   const [roster, setRoster] = useState<Player[]>([]);
+  const [claimedIds, setClaimedIds] = useState<string[]>([]);
   const [pickedPlayerId, setPickedPlayerId] = useState<string | null>(null);
   const [guestName, setGuestName] = useState('');
 
@@ -45,9 +54,10 @@ export function RoomGate() {
     setError(null);
     setBusy(true);
     try {
-      const players = await getRoomPlayers(code);
+      const [players, claims] = await Promise.all([getRoomPlayers(code), getRoomClaims(code)]);
       setRoster(players);
-      setPickedPlayerId(players[0]?.id ?? null);
+      setClaimedIds(claims);
+      setPickedPlayerId(players.find((p) => !claims.includes(p.id))?.id ?? null);
       setPendingCode(code);
       setEnteringAsAdmin(asAdmin);
       setScreen('identity');
@@ -81,11 +91,29 @@ export function RoomGate() {
     await proceedToIdentity(joinInput, false);
   }
 
-  function confirmIdentity() {
+  async function confirmIdentity() {
     if (!pickedPlayerId || !pendingCode) return;
-    setActivePlayer(pickedPlayerId);
-    setIsRoomAdmin(enteringAsAdmin);
-    setRoomCode(pendingCode);
+    setError(null);
+    setBusy(true);
+    try {
+      await claimPlayerInRoom(pendingCode, pickedPlayerId);
+      setActivePlayer(pickedPlayerId);
+      setIsRoomAdmin(enteringAsAdmin);
+      setRoomCode(pendingCode);
+    } catch (e) {
+      // someone else grabbed this exact person between loading the list and clicking "beitreten" -
+      // refresh the claims so the option disappears instead of letting the click be tried again
+      setError((e as Error).message);
+      try {
+        const claims = await getRoomClaims(pendingCode);
+        setClaimedIds(claims);
+        setPickedPlayerId(roster.find((p) => !claims.includes(p.id))?.id ?? null);
+      } catch {
+        // best-effort refresh only - the error above already explains what happened
+      }
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function joinAsGuest() {
@@ -182,21 +210,29 @@ export function RoomGate() {
               <p className="error">Im Raum sind noch keine Spieler eingetragen. Bitte den Admin, zuerst das Setup auszufüllen.</p>
             ) : (
               <div className="button-col">
-                {roster.map((p) => (
-                  <label key={p.id} className={`identity-option ${pickedPlayerId === p.id ? 'selected' : ''}`}>
-                    <input
-                      type="radio"
-                      name="identity"
-                      checked={pickedPlayerId === p.id}
-                      onChange={() => setPickedPlayerId(p.id)}
-                    />
-                    {p.name}
-                  </label>
-                ))}
+                {roster.map((p) => {
+                  const taken = claimedIds.includes(p.id);
+                  return (
+                    <label
+                      key={p.id}
+                      className={`identity-option ${pickedPlayerId === p.id ? 'selected' : ''} ${taken ? 'taken' : ''}`}
+                    >
+                      <input
+                        type="radio"
+                        name="identity"
+                        disabled={taken}
+                        checked={pickedPlayerId === p.id}
+                        onChange={() => setPickedPlayerId(p.id)}
+                      />
+                      {p.name}
+                      {taken && <span className="hint"> (schon vergeben)</span>}
+                    </label>
+                  );
+                })}
               </div>
             )}
             <div className="button-col">
-              <button disabled={!pickedPlayerId} onClick={confirmIdentity}>
+              <button disabled={!pickedPlayerId || busy} onClick={confirmIdentity}>
                 Als {roster.find((p) => p.id === pickedPlayerId)?.name ?? '...'}
                 {enteringAsAdmin ? ' + Admin' : ''} beitreten
               </button>

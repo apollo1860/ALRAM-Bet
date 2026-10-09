@@ -72,6 +72,16 @@ export interface Transaction {
 
 export type Phase = 'setup' | 'knockout' | 'done';
 
+/** A personal inbox entry - the welcome note, a heads-up that someone else deposited, or a bet recap. */
+export interface Message {
+  id: string;
+  recipientId: string;
+  kind: 'welcome' | 'deposit' | 'bet-won' | 'bet-lost';
+  text: string;
+  createdAt: number;
+  read: boolean;
+}
+
 /**
  * The slice of app state that's shared across devices in a multi-device
  * room. Deliberately excludes activePlayerId, which stays local to each
@@ -87,5 +97,6 @@ export interface SyncedState {
   wallets: Record<string, number>;
   transactions: Transaction[];
   bets: Bet[];
+  messages: Message[];
   phase: Phase;
 }

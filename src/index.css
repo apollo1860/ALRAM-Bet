@@ -112,6 +112,13 @@ header {
   padding-bottom: 2px;
 }
 
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
 .player-switcher {
   display: flex;
   align-items: center;
@@ -122,7 +129,7 @@ header {
 
 .player-switcher select {
   min-width: 0;
-  max-width: 46vw;
+  max-width: 38vw;
   padding: 8px 10px;
   border-radius: 999px;
   border: 1px solid var(--border);
@@ -151,6 +158,121 @@ header {
   font-size: 0.78rem;
   white-space: nowrap;
   box-shadow: 0 2px 8px color-mix(in srgb, var(--accent) 35%, transparent);
+}
+
+/* ---------- Mailbox ---------- */
+
+.mailbox-btn {
+  position: relative;
+  flex-shrink: 0;
+  width: 38px;
+  height: 38px;
+  min-height: 38px;
+  padding: 0;
+  border-radius: 50%;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-size: 1.05rem;
+  box-shadow: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mailbox-badge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--danger);
+  color: var(--danger-ink);
+  font-size: 0.68rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 0 2px var(--bg);
+}
+
+.mailbox-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 110;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  animation: pulse-backdrop-in 0.2s ease both;
+}
+
+.mailbox-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+  padding: 18px;
+  width: 100%;
+  max-width: 420px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.mailbox-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.mailbox-header h3 {
+  margin: 0;
+  color: var(--text);
+}
+
+.mailbox-close {
+  width: 32px;
+  height: 32px;
+  min-height: 32px;
+  padding: 0;
+  border-radius: 50%;
+}
+
+.mailbox-list {
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.mailbox-msg {
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+}
+
+.mailbox-msg p {
+  margin: 0 0 4px;
+  font-size: 0.88rem;
+  line-height: 1.4;
+}
+
+.mailbox-msg.unread {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 10%, var(--surface-2));
+}
+
+.mailbox-time {
+  font-size: 0.72rem;
+  color: var(--muted);
 }
 
 /* ---------- Bottom nav ---------- */

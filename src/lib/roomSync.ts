@@ -2,9 +2,20 @@ import { get, onValue, ref, set as dbSet } from 'firebase/database';
 import { db } from '../firebase';
 import { useStore, freshSyncedState } from '../store/useStore';
 import { useSyncStatus } from '../store/useSyncStatus';
-import type { Guest, Player, SyncedState } from '../types';
+import { createMessage, WELCOME_TEXT } from './messages';
+import type { Guest, Message, Player, SyncedState } from '../types';
 
-const SYNCED_KEYS = ['players', 'guests', 'seedSlots', 'matches', 'wallets', 'transactions', 'bets', 'phase'] as const;
+const SYNCED_KEYS = [
+  'players',
+  'guests',
+  'seedSlots',
+  'matches',
+  'wallets',
+  'transactions',
+  'bets',
+  'messages',
+  'phase',
+] as const;
 
 function pickSynced(state: ReturnType<typeof useStore.getState>): SyncedState {
   return {
@@ -15,6 +26,7 @@ function pickSynced(state: ReturnType<typeof useStore.getState>): SyncedState {
     wallets: state.wallets,
     transactions: state.transactions,
     bets: state.bets,
+    messages: state.messages,
     phase: state.phase,
   };
 }
@@ -33,6 +45,7 @@ function normalizeSyncedState(raw: Partial<SyncedState> | null): SyncedState {
     wallets: raw?.wallets ?? fresh.wallets,
     transactions: raw?.transactions ?? [],
     bets: raw?.bets ?? [],
+    messages: raw?.messages ?? [],
     phase: raw?.phase ?? 'setup',
   };
 }
@@ -84,6 +97,11 @@ export async function addGuestToRoom(code: string, guest: Guest): Promise<void> 
   const snap = await withTimeout(get(ref(db, `rooms/${code}/guests`)));
   const existing = (snap.val() as Guest[] | null) ?? [];
   await withTimeout(dbSet(ref(db, `rooms/${code}/guests`), [...existing, guest]));
+
+  const messagesSnap = await withTimeout(get(ref(db, `rooms/${code}/messages`)));
+  const existingMessages = (messagesSnap.val() as Message[] | null) ?? [];
+  const welcome = createMessage(guest.id, 'welcome', WELCOME_TEXT);
+  await withTimeout(dbSet(ref(db, `rooms/${code}/messages`), [...existingMessages, welcome]));
 }
 
 let unsubscribeSnapshot: (() => void) | null = null;

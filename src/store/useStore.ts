@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { Bet, Guest, Match, Phase, Player, SyncedState, Transaction } from '../types';
+import type { Bet, Guest, Match, Message, Phase, Player, SyncedState, Transaction } from '../types';
 import {
   BYE,
   buildDoubleEliminationBracket,
@@ -13,7 +13,8 @@ import {
 } from '../lib/bracket';
 import { poolOdds, updateRating, winProbability } from '../lib/odds';
 import { buildDefaultPlayers } from './seed';
-import { ADMIN_ID } from '../lib/format';
+import { ADMIN_ID, fmtCoins, playerName } from '../lib/format';
+import { createMessage, WELCOME_TEXT } from '../lib/messages';
 
 interface State {
   players: Player[];
@@ -23,6 +24,7 @@ interface State {
   wallets: Record<string, number>;
   transactions: Transaction[];
   bets: Bet[];
+  messages: Message[];
   activePlayerId: string | null;
   phase: Phase;
 
@@ -31,6 +33,8 @@ interface State {
   /** Add a new guest (bets only, never plays) and return their new id. Only for single-device mode -
    *  a multi-device room writes guests straight to Firebase instead, see lib/roomSync.ts. */
   addGuest: (name: string) => string;
+  /** Mark every message addressed to this identity as read - called once the inbox is opened. */
+  markMessagesRead: (recipientId: string) => void;
   setSeedSlot: (index: number, playerId: string) => void;
   /** Build the double-elimination bracket from the current seed slots. Returns an error message, or null on success. */
   startBracket: () => string | null;
@@ -74,6 +78,7 @@ export function freshSyncedState(): SyncedState {
     wallets: initialWallets(players),
     transactions: [],
     bets: [],
+    messages: players.map((p) => createMessage(p.id, 'welcome', WELCOME_TEXT)),
     phase: 'setup',
   };
 }
@@ -138,9 +143,17 @@ export const useStore = create<State>()(
       addGuest: (name) => {
         const id = `guest-${crypto.randomUUID()}`;
         const trimmed = name.trim() || 'Gast';
-        set((state) => ({ guests: [...state.guests, { id, name: trimmed }] }));
+        set((state) => ({
+          guests: [...state.guests, { id, name: trimmed }],
+          messages: [...state.messages, createMessage(id, 'welcome', WELCOME_TEXT)],
+        }));
         return id;
       },
+
+      markMessagesRead: (recipientId) =>
+        set((state) => ({
+          messages: state.messages.map((m) => (m.recipientId === recipientId && !m.read ? { ...m, read: true } : m)),
+        })),
 
       setSeedSlot: (index, playerId) =>
         set((state) => {
@@ -268,13 +281,23 @@ export const useStore = create<State>()(
 
       depositCoins: (playerId, amount) => {
         if (amount <= 0) return;
-        set((state) => ({
-          wallets: { ...state.wallets, [playerId]: (state.wallets[playerId] ?? 0) + amount },
-          transactions: [
-            ...state.transactions,
-            { id: crypto.randomUUID(), playerId, type: 'deposit', amount, createdAt: Date.now() },
-          ],
-        }));
+        set((state) => {
+          const depositorName = playerName(state.players, playerId, state.guests);
+          const otherIds = [...state.players.map((p) => p.id), ...state.guests.map((g) => g.id)].filter(
+            (id) => id !== playerId
+          );
+          const notifications = otherIds.map((id) =>
+            createMessage(id, 'deposit', `💶 ${depositorName} hat ${fmtCoins(amount)} eingezahlt.`)
+          );
+          return {
+            wallets: { ...state.wallets, [playerId]: (state.wallets[playerId] ?? 0) + amount },
+            transactions: [
+              ...state.transactions,
+              { id: crypto.randomUUID(), playerId, type: 'deposit', amount, createdAt: Date.now() },
+            ],
+            messages: [...state.messages, ...notifications],
+          };
+        });
       },
 
       placeBet: (matchId, bettorId, pickedPlayerId, amount) => {
@@ -340,19 +363,37 @@ export const useStore = create<State>()(
         const winFairProb = winnerIsA ? fairProbA : 1 - fairProbA;
         const finalOdds = poolOdds(winPool, losePool, winFairProb);
 
+        const matchLabel = `${playerName(state.players, finishedMatch.playerAId, state.guests)} vs ${playerName(state.players, finishedMatch.playerBId, state.guests)}`;
+
         const wallets = { ...state.wallets };
         const newTx: Transaction[] = [];
+        const newMsgs: Message[] = [];
         const updatedBets = state.bets.map((b) => {
           if (b.matchId !== matchId || b.status !== 'open') return b;
+          const pickName = playerName(state.players, b.pickedPlayerId, state.guests);
           if (b.pickedPlayerId === winnerId) {
             const payout = Math.round(b.amount * finalOdds * 100) / 100;
             wallets[b.bettorId] = (wallets[b.bettorId] ?? 0) + payout;
             newTx.push({ id: crypto.randomUUID(), playerId: b.bettorId, type: 'payout', amount: payout, createdAt: Date.now(), note: matchId });
+            newMsgs.push(
+              createMessage(
+                b.bettorId,
+                'bet-won',
+                `🎉 Deine Wette auf ${pickName} (${matchLabel}) hat gewonnen! Auszahlung: ${fmtCoins(payout)}.`
+              )
+            );
             return { ...b, status: 'won' as const, payout };
           }
+          newMsgs.push(
+            createMessage(
+              b.bettorId,
+              'bet-lost',
+              `😬 Deine Wette auf ${pickName} (${matchLabel}) hat nicht gewonnen. Einsatz verloren: ${fmtCoins(b.amount)}.`
+            )
+          );
           return { ...b, status: 'lost' as const, payout: 0 };
         });
-        set({ wallets, bets: updatedBets, transactions: [...state.transactions, ...newTx] });
+        set({ wallets, bets: updatedBets, transactions: [...state.transactions, ...newTx], messages: [...state.messages, ...newMsgs] });
       },
 
       resetTournament: () => set(freshState()),

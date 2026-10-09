@@ -153,3 +153,52 @@ export function getChampion(matches: Match[]): string | null {
   if (gf1?.status === 'finished' && gf1.winnerId === gf1.playerAId) return gf1.winnerId;
   return null;
 }
+
+export interface PlacementRow {
+  place: number;
+  playerId: string;
+}
+
+/** Fixed placement tier per losers-bracket slot: losing there is a player's
+ *  final result, so the slot alone determines the rank. A bye just means
+ *  one tier's tied group has one less player in it - the tier numbers
+ *  themselves never change. */
+const PLACEMENT_BY_SLOT: Record<string, number> = {
+  LB6: 3,
+  LB5: 4,
+  LB3: 5,
+  LB4: 5,
+  LB1: 7,
+  LB2: 7,
+};
+
+/**
+ * Final standings, filled in as soon as each result is determined - most
+ * placements (3rd through 7th) are known well before the grand final, since
+ * they're decided by losers-bracket matches earlier in the bracket. 1st and
+ * 2nd only appear once the title is actually decided (which, with a bracket
+ * reset, might take a second grand-final match).
+ */
+export function computePlacements(matches: Match[]): PlacementRow[] {
+  const rows: PlacementRow[] = [];
+
+  const champion = getChampion(matches);
+  if (champion) {
+    rows.push({ place: 1, playerId: champion });
+    const gf2 = matches.find((m) => m.slot === 'GF2');
+    const decidingGF = gf2?.status === 'finished' ? gf2 : matches.find((m) => m.slot === 'GF1');
+    if (decidingGF?.winnerId) {
+      const runnerUp = decidingGF.winnerId === decidingGF.playerAId ? decidingGF.playerBId : decidingGF.playerAId;
+      if (runnerUp) rows.push({ place: 2, playerId: runnerUp });
+    }
+  }
+
+  for (const [slot, place] of Object.entries(PLACEMENT_BY_SLOT)) {
+    const m = matches.find((mm) => mm.slot === slot);
+    if (m?.status !== 'finished' || !m.winnerId) continue;
+    const loser = m.winnerId === m.playerAId ? m.playerBId : m.playerAId;
+    if (loser && loser !== BYE) rows.push({ place, playerId: loser });
+  }
+
+  return rows.sort((a, b) => a.place - b.place);
+}

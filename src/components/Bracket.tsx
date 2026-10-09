@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useStore } from '../store/useStore';
-import { BYE } from '../lib/bracket';
+import { BYE, computePlacements } from '../lib/bracket';
 import { playerName } from '../lib/format';
 import type { Match, MatchStage } from '../types';
 
@@ -118,6 +118,27 @@ function BracketSection({
   );
 }
 
+function PlacementList({ matches }: { matches: Match[] }) {
+  const players = useStore((s) => s.players);
+  const rows = computePlacements(matches);
+  if (rows.length === 0) return null;
+
+  return (
+    <section className="bracket-section">
+      <h2 className="bracket-section-title placement-title">🏅 Platzierungen</h2>
+      <p className="hint">Wird laufend aktualisiert, sobald eine Platzierung feststeht.</p>
+      <div className="placement-list">
+        {rows.map((row) => (
+          <div key={row.playerId} className="placement-row">
+            <span className="placement-rank">{row.place}.</span>
+            <span className="placement-name">{playerName(players, row.playerId)}</span>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 export function Bracket({ isAdmin }: { isAdmin: boolean }) {
   const matches = useStore((s) => s.matches);
   const phase = useStore((s) => s.phase);
@@ -134,6 +155,7 @@ export function Bracket({ isAdmin }: { isAdmin: boolean }) {
       <BracketSection title="Gewinner-Bracket" icon="🏆" variant="wb" stages={WB_STAGES} byStage={byStage} isAdmin={isAdmin} />
       <BracketSection title="Verlierer-Bracket" icon="🔁" variant="lb" stages={LB_STAGES} byStage={byStage} isAdmin={isAdmin} />
       <BracketSection title="Grand Final" icon="👑" variant="gf" stages={GF_STAGES} byStage={byStage} isAdmin={isAdmin} />
+      <PlacementList matches={matches} />
     </>
   );
 }

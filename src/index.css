@@ -554,6 +554,45 @@ button.danger {
   border-bottom-color: var(--gold);
 }
 
+.placement-title {
+  color: var(--text);
+  border-bottom-color: var(--border);
+}
+
+.placement-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.placement-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow);
+}
+
+.placement-row:nth-child(1) {
+  border-color: var(--gold);
+  border-width: 2px;
+}
+
+.placement-rank {
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--gold);
+  min-width: 1.6em;
+}
+
+.placement-name {
+  font-weight: 600;
+}
+
 .bracket-scroll {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;

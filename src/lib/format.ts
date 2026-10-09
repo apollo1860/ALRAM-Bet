@@ -1,7 +1,9 @@
 import type { Player } from '../types';
+import { BYE } from './bracket';
 
 export function playerName(players: Player[], id: string | null): string {
   if (!id) return '???';
+  if (id === BYE) return 'Freilos';
   return players.find((p) => p.id === id)?.name ?? '???';
 }
 

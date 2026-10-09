@@ -514,11 +514,58 @@ button.danger {
 
 /* ---------- Bracket ---------- */
 
+.bracket-section {
+  margin-bottom: 22px;
+}
+
+.bracket-section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 1.05rem;
+  padding-bottom: 8px;
+  margin: 0 0 12px;
+  border-bottom: 2px solid var(--border);
+}
+
+.bracket-section-wb {
+  padding: 2px;
+}
+
+.bracket-section-wb .bracket-section-title {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+
+.bracket-section-lb {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 14px 10px 6px;
+}
+
+.bracket-section-lb .bracket-section-title {
+  color: var(--muted);
+  border-bottom-color: var(--border);
+}
+
+.bracket-section-gf .bracket-section-title {
+  color: var(--gold);
+  border-bottom-color: var(--gold);
+}
+
 .bracket-scroll {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
   margin: 0 -12px;
   padding: 4px 12px 8px;
+}
+
+/* Inside the shaded losers-bracket zone, stay within its own box instead of
+   bleeding edge-to-edge like the page-level sections do. */
+.bracket-section-lb .bracket-scroll {
+  margin: 0;
+  padding: 4px 0 8px;
 }
 
 .bracket {

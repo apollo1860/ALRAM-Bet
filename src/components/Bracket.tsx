@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useStore } from '../store/useStore';
+import { BYE } from '../lib/bracket';
 import { playerName } from '../lib/format';
 import type { Match, MatchStage } from '../types';
 
@@ -39,6 +40,7 @@ function MatchCard({ match, isAdmin }: { match: Match; isAdmin: boolean }) {
   const nameB = playerName(players, match.playerBId);
   const ready = match.playerAId && match.playerBId;
   const done = match.status === 'finished';
+  const isBye = match.playerAId === BYE || match.playerBId === BYE;
 
   return (
     <div className={`bracket-match ${match.status}`}>
@@ -46,9 +48,7 @@ function MatchCard({ match, isAdmin }: { match: Match; isAdmin: boolean }) {
       <PlayerLine name={match.playerAId ? nameA : '—'} isWinner={done && match.winnerId === match.playerAId} isDone={done} />
       <PlayerLine name={match.playerBId ? nameB : '—'} isWinner={done && match.winnerId === match.playerBId} isDone={done} />
       {done ? (
-        <div className="bracket-score">
-          {match.scoreA}:{match.scoreB}
-        </div>
+        <div className="bracket-score">{isBye ? 'Freilos' : `${match.scoreA}:${match.scoreB}`}</div>
       ) : ready && isAdmin ? (
         <ResultForm onSubmit={(a, b) => enterMatchResult(match.id, a, b)} />
       ) : (
@@ -71,17 +71,52 @@ function Round({ title, stage, matches, isAdmin }: { title: string; stage: Match
 }
 
 const ROUND_TITLES: Record<MatchStage, string> = {
-  'wb-r1': 'Gewinner R1',
-  'wb-r2': 'Gewinner HF',
-  'wb-r3': 'Gewinner Finale',
-  'lb-r1': 'Verlierer R1',
-  'lb-r2': 'Verlierer R2',
-  'lb-r3': 'Verlierer HF',
-  'lb-r4': 'Verlierer Finale',
+  'wb-r1': 'Runde 1',
+  'wb-r2': 'Halbfinale',
+  'wb-r3': 'Finale',
+  'lb-r1': 'Runde 1',
+  'lb-r2': 'Runde 2',
+  'lb-r3': 'Halbfinale',
+  'lb-r4': 'Finale',
   gf: 'Grand Final',
 };
 
-const ROUND_ORDER: MatchStage[] = ['wb-r1', 'wb-r2', 'wb-r3', 'lb-r1', 'lb-r2', 'lb-r3', 'lb-r4', 'gf'];
+const WB_STAGES: MatchStage[] = ['wb-r1', 'wb-r2', 'wb-r3'];
+const LB_STAGES: MatchStage[] = ['lb-r1', 'lb-r2', 'lb-r3', 'lb-r4'];
+const GF_STAGES: MatchStage[] = ['gf'];
+
+function BracketSection({
+  title,
+  icon,
+  variant,
+  stages,
+  byStage,
+  isAdmin,
+}: {
+  title: string;
+  icon: string;
+  variant: 'wb' | 'lb' | 'gf';
+  stages: MatchStage[];
+  byStage: (stage: MatchStage) => Match[];
+  isAdmin: boolean;
+}) {
+  const rounds = stages.map((stage) => ({ stage, matches: byStage(stage) })).filter((r) => r.matches.length > 0);
+  if (rounds.length === 0) return null;
+  return (
+    <section className={`bracket-section bracket-section-${variant}`}>
+      <h2 className="bracket-section-title">
+        {icon} {title}
+      </h2>
+      <div className="bracket-scroll">
+        <div className="bracket">
+          {rounds.map(({ stage, matches }) => (
+            <Round key={stage} title={ROUND_TITLES[stage]} stage={stage} matches={matches} isAdmin={isAdmin} />
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
 
 export function Bracket({ isAdmin }: { isAdmin: boolean }) {
   const matches = useStore((s) => s.matches);
@@ -95,12 +130,10 @@ export function Bracket({ isAdmin }: { isAdmin: boolean }) {
     matches.filter((m) => m.stage === stage && (stage !== 'gf' || m.slot === 'GF1' || m.playerAId));
 
   return (
-    <div className="bracket-scroll">
-      <div className="bracket">
-        {ROUND_ORDER.map((stage) => (
-          <Round key={stage} title={ROUND_TITLES[stage]} stage={stage} matches={byStage(stage)} isAdmin={isAdmin} />
-        ))}
-      </div>
-    </div>
+    <>
+      <BracketSection title="Gewinner-Bracket" icon="🏆" variant="wb" stages={WB_STAGES} byStage={byStage} isAdmin={isAdmin} />
+      <BracketSection title="Verlierer-Bracket" icon="🔁" variant="lb" stages={LB_STAGES} byStage={byStage} isAdmin={isAdmin} />
+      <BracketSection title="Grand Final" icon="👑" variant="gf" stages={GF_STAGES} byStage={byStage} isAdmin={isAdmin} />
+    </>
   );
 }

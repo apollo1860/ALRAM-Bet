@@ -1,5 +1,9 @@
 import type { Match, MatchStage } from '../types';
 
+/** Sentinel "player id" for an empty bracket slot nobody fills - a bye. Flows through
+ *  the same winner/loser propagation as a real id so byes cascade automatically. */
+export const BYE = 'BYE';
+
 function makeMatch(
   slot: string,
   stage: MatchStage,
@@ -26,21 +30,81 @@ function makeMatch(
   };
 }
 
+/** Push a finished match's winner into the next bracket slot it feeds. */
+export function propagateWinner(matches: Match[], finished: Match): Match[] {
+  if (!finished.winnerTo || !finished.winnerId) return matches;
+  const { matchSlot, as } = finished.winnerTo;
+  return matches.map((m) => {
+    if (m.slot !== matchSlot) return m;
+    const patch = as === 'A' ? { playerAId: finished.winnerId } : { playerBId: finished.winnerId };
+    const merged = { ...m, ...patch };
+    const bothFilled = !!merged.playerAId && !!merged.playerBId;
+    return { ...merged, status: bothFilled ? ('ready' as const) : m.status };
+  });
+}
+
+/** Push a finished winners-bracket match's loser down into its losers-bracket slot. */
+export function propagateLoser(matches: Match[], finished: Match): Match[] {
+  if (!finished.loserTo || !finished.winnerId) return matches;
+  const loserId = finished.winnerId === finished.playerAId ? finished.playerBId : finished.playerAId;
+  if (!loserId) return matches;
+  const { matchSlot, as } = finished.loserTo;
+  return matches.map((m) => {
+    if (m.slot !== matchSlot) return m;
+    const patch = as === 'A' ? { playerAId: loserId } : { playerBId: loserId };
+    const merged = { ...m, ...patch };
+    const bothFilled = !!merged.playerAId && !!merged.playerBId;
+    return { ...merged, status: bothFilled ? ('ready' as const) : m.status };
+  });
+}
+
 /**
- * Standard 8-player double-elimination bracket. `seedSlots` is the admin's
- * manual draw order (position 1..8); WB round 1 pairs them 1v2, 3v4, 5v6,
- * 7v8. Losers of the winners bracket (WB) drop into the losers bracket
- * (LB); losing in the LB eliminates you outright, since by construction
- * you can only reach the LB after one loss already. The grand final (GF1)
- * pits the undefeated WB champion against the LB champion; if the LB
- * champion wins, a second decisive match (GF2) is required, since the WB
- * champion would otherwise be out after a single loss - that activation is
- * handled in the store, not here, so GF2 starts empty.
+ * Auto-resolve every match that ended up with one real player and a BYE in
+ * the other slot: the real player advances without playing, and that
+ * "result" is propagated onward exactly like a normal win/loss (including
+ * the BYE itself cascading further if it lands in another match's slot).
+ * Safe to call unconditionally - a no-op when there's no bye in play.
+ */
+export function settleByes(matches: Match[]): Match[] {
+  let current = matches;
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const m of current) {
+      if (m.status === 'finished') continue;
+      const aIsBye = m.playerAId === BYE;
+      const bIsBye = m.playerBId === BYE;
+      if (!aIsBye && !bIsBye) continue;
+      const realId = aIsBye ? m.playerBId : m.playerAId;
+      if (!realId) continue; // the bye side is known, but the real side hasn't been decided yet
+      const finished: Match = { ...m, winnerId: realId, status: 'finished' };
+      current = current.map((mm) => (mm.id === m.id ? finished : mm));
+      current = propagateWinner(current, finished);
+      current = propagateLoser(current, finished);
+      changed = true;
+      break; // matches changed underneath the loop - rescan from the top
+    }
+  }
+  return current;
+}
+
+/**
+ * Standard 8-slot double-elimination bracket. `seedSlots` is the admin's
+ * manual draw order (position 1..8, using BYE for an empty slot when there
+ * are fewer than 8 real players); WB round 1 pairs them 1v2, 3v4, 5v6, 7v8.
+ * Losers of the winners bracket (WB) drop into the losers bracket (LB);
+ * losing in the LB eliminates you outright, since by construction you can
+ * only reach the LB after one loss already. The grand final (GF1) pits the
+ * undefeated WB champion against the LB champion; if the LB champion wins,
+ * a second decisive match (GF2) is required, since the WB champion would
+ * otherwise be out after a single loss - that activation is handled in the
+ * store, not here, so GF2 starts empty. Any bye is resolved immediately so
+ * nobody sees a "match" they were never meant to play.
  */
 export function buildDoubleEliminationBracket(seedSlots: string[]): Match[] {
   const [s1, s2, s3, s4, s5, s6, s7, s8] = seedSlots;
 
-  return [
+  const matches = [
     // Winners bracket, round 1
     makeMatch('WB1', 'wb-r1', s1, s2, { matchSlot: 'WB5', as: 'A' }, { matchSlot: 'LB1', as: 'A' }),
     makeMatch('WB2', 'wb-r1', s3, s4, { matchSlot: 'WB5', as: 'B' }, { matchSlot: 'LB1', as: 'B' }),
@@ -72,6 +136,8 @@ export function buildDoubleEliminationBracket(seedSlots: string[]): Match[] {
     makeMatch('GF1', 'gf', null, null, null, null),
     makeMatch('GF2', 'gf', null, null, null, null),
   ];
+
+  return settleByes(matches);
 }
 
 /** True for any winners-bracket round: losing there drops you to the LB instead of eliminating you. */

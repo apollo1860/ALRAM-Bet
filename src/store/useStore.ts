@@ -1,7 +1,14 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { Bet, Match, Phase, Player, SyncedState, Transaction } from '../types';
-import { buildDoubleEliminationBracket, isWinnersBracketStage } from '../lib/bracket';
+import {
+  BYE,
+  buildDoubleEliminationBracket,
+  isWinnersBracketStage,
+  propagateLoser,
+  propagateWinner,
+  settleByes,
+} from '../lib/bracket';
 import { poolOdds, updateRating, winProbability } from '../lib/odds';
 import { buildDefaultPlayers } from './seed';
 import { ADMIN_ID } from '../lib/format';
@@ -38,12 +45,21 @@ function initialWallets(players: Player[]): Record<string, number> {
   return w;
 }
 
+const BRACKET_SIZE = 8;
+
+/** Default draw order: the real players in seed order, padded with byes to fill the bracket. */
+function defaultSeedSlots(players: Player[]): string[] {
+  const slots = players.map((p) => p.id);
+  while (slots.length < BRACKET_SIZE) slots.push(BYE);
+  return slots;
+}
+
 /** The shared/syncable slice only - what a brand new multi-device room starts from. */
 export function freshSyncedState(): SyncedState {
   const players = buildDefaultPlayers();
   return {
     players,
-    seedSlots: players.map((p) => p.id),
+    seedSlots: defaultSeedSlots(players),
     matches: [],
     wallets: initialWallets(players),
     transactions: [],
@@ -85,34 +101,6 @@ function stampFairProbs(players: Player[], matches: Match[]): Match[] {
   });
 }
 
-/** Push a finished match's winner into the next bracket slot it feeds. */
-function propagateWinner(matches: Match[], finished: Match): Match[] {
-  if (!finished.winnerTo || !finished.winnerId) return matches;
-  const { matchSlot, as } = finished.winnerTo;
-  return matches.map((m) => {
-    if (m.slot !== matchSlot) return m;
-    const patch = as === 'A' ? { playerAId: finished.winnerId } : { playerBId: finished.winnerId };
-    const merged = { ...m, ...patch };
-    const bothFilled = !!merged.playerAId && !!merged.playerBId;
-    return { ...merged, status: bothFilled ? ('ready' as const) : m.status };
-  });
-}
-
-/** Push a finished winners-bracket match's loser down into its losers-bracket slot. */
-function propagateLoser(matches: Match[], finished: Match): Match[] {
-  if (!finished.loserTo || !finished.winnerId) return matches;
-  const loserId = finished.winnerId === finished.playerAId ? finished.playerBId : finished.playerAId;
-  if (!loserId) return matches;
-  const { matchSlot, as } = finished.loserTo;
-  return matches.map((m) => {
-    if (m.slot !== matchSlot) return m;
-    const patch = as === 'A' ? { playerAId: loserId } : { playerBId: loserId };
-    const merged = { ...m, ...patch };
-    const bothFilled = !!merged.playerAId && !!merged.playerBId;
-    return { ...merged, status: bothFilled ? ('ready' as const) : m.status };
-  });
-}
-
 /** LB-side won GF1: the undefeated WB side now has one loss, so a decisive rematch is required. */
 function activateGrandFinalReset(matches: Match[], aId: string, bId: string): Match[] {
   return matches.map((m) => (m.slot === 'GF2' ? { ...m, playerAId: aId, playerBId: bId, status: 'ready' as const } : m));
@@ -139,10 +127,18 @@ export const useStore = create<State>()(
 
       startBracket: () => {
         const { players, seedSlots } = get();
+        const byesNeeded = BRACKET_SIZE - players.length;
+        const realEntries = seedSlots.filter((id) => id !== BYE);
+        const byeCount = seedSlots.length - realEntries.length;
         const validIds = new Set(players.map((p) => p.id));
-        const distinct = new Set(seedSlots);
-        if (seedSlots.length !== players.length || distinct.size !== players.length || seedSlots.some((id) => !validIds.has(id))) {
-          return 'Jede der 8 Positionen braucht genau einen, jeweils anderen Spieler.';
+        const distinctReal = new Set(realEntries);
+        if (
+          seedSlots.length !== BRACKET_SIZE ||
+          byeCount !== byesNeeded ||
+          distinctReal.size !== players.length ||
+          realEntries.some((id) => !validIds.has(id))
+        ) {
+          return `Jeder Spieler braucht genau eine Position, die restlichen ${byesNeeded} Position(en) müssen "Freilos" sein.`;
         }
         const matches = buildDoubleEliminationBracket(seedSlots);
         set({ matches: stampFairProbs(players, matches), phase: 'knockout' });
@@ -164,6 +160,7 @@ export const useStore = create<State>()(
 
         updatedMatches = propagateWinner(updatedMatches, finished);
         updatedMatches = propagateLoser(updatedMatches, finished);
+        updatedMatches = settleByes(updatedMatches);
 
         let phase: Phase = 'knockout';
         if (finished.slot === 'GF1') {

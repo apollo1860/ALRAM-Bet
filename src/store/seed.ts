@@ -6,11 +6,11 @@ interface SeedPlayer {
   odds: number;
 }
 
-// The 8 players who qualified for the double-elimination bracket, with
-// their fixed starting title odds.
+// The 7 players who qualified for the double-elimination bracket, with
+// their fixed starting title odds. The bracket has 8 slots, so one player
+// gets a bye in round 1 - see lib/bracket.ts's BYE handling.
 const SEED: SeedPlayer[] = [
   { name: 'Felix', odds: 1.45 },
-  { name: 'Robin', odds: 1.95 },
   { name: 'Philippe', odds: 1.52 },
   { name: 'Anton', odds: 2.3 },
   { name: 'Julia', odds: 20 },

@@ -25,6 +25,8 @@ function makeMatch(
     winnerId: null,
     status: aId && bId ? 'ready' : 'pending',
     fairProbA: null,
+    preMatchRatingA: null,
+    preMatchRatingB: null,
     poolA: 0,
     poolB: 0,
   };
@@ -201,4 +203,69 @@ export function computePlacements(matches: Match[]): PlacementRow[] {
   }
 
   return rows.sort((a, b) => a.place - b.place);
+}
+
+/** True once a match the result flowed into has itself been locked in some way -
+ *  played, started, or already has real money riding on it - so undoing the
+ *  original result would orphan that state instead of cleanly rewinding it. */
+function isLockedBy(matches: Match[], slot: string): boolean {
+  const m = matches.find((mm) => mm.slot === slot);
+  if (!m) return false;
+  return m.status === 'live' || m.status === 'finished' || m.poolA > 0 || m.poolB > 0;
+}
+
+/**
+ * Whether a human-entered result can still be corrected: only true for a
+ * finished, non-bye match whose winner and loser haven't been able to do
+ * anything yet because of it - nobody has started or finished the next match
+ * either of them dropped into, and nobody has bet on it. Byes aren't real
+ * results, so there's nothing to correct there - the draw itself would need
+ * to change instead.
+ */
+export function canCorrectMatch(matches: Match[], matchId: string): boolean {
+  const m = matches.find((mm) => mm.id === matchId);
+  if (!m || m.status !== 'finished' || !m.winnerId) return false;
+  if (m.playerAId === BYE || m.playerBId === BYE) return false;
+  if (m.winnerTo && isLockedBy(matches, m.winnerTo.matchSlot)) return false;
+  if (m.loserTo && isLockedBy(matches, m.loserTo.matchSlot)) return false;
+  if (m.slot === 'GF1' && isLockedBy(matches, 'GF2')) return false;
+  return true;
+}
+
+/** Remove whatever this match's result pushed into a downstream slot, putting that slot back to pending. */
+function clearPropagatedSlot(matches: Match[], target: Match['winnerTo'], expectedId: string | null): Match[] {
+  if (!target || !expectedId) return matches;
+  return matches.map((m) => {
+    if (m.slot !== target.matchSlot) return m;
+    const field = target.as === 'A' ? 'playerAId' : 'playerBId';
+    if (m[field] !== expectedId) return m;
+    return { ...m, [field]: null, status: 'pending' as const };
+  });
+}
+
+/**
+ * Undo a finished match's result, assuming canCorrectMatch(matches, matchId)
+ * is true - callers must check that first. Restores the match itself to
+ * 'ready' for re-entry, clears whatever it pushed downstream (including a
+ * grand-final reset it may have triggered), and reports who needs their
+ * rating/elimination state rolled back so the store can apply that too.
+ */
+export function revertMatchResult(
+  matches: Match[],
+  matchId: string
+): { matches: Match[]; winnerId: string; loserId: string } | null {
+  const m = matches.find((mm) => mm.id === matchId);
+  if (!m || !m.winnerId || !m.playerAId || !m.playerBId) return null;
+  const loserId = m.winnerId === m.playerAId ? m.playerBId : m.playerAId;
+
+  let updated = matches.map((mm) =>
+    mm.id === matchId ? { ...mm, scoreA: null, scoreB: null, winnerId: null, status: 'ready' as const } : mm
+  );
+  updated = clearPropagatedSlot(updated, m.winnerTo, m.winnerId);
+  updated = clearPropagatedSlot(updated, m.loserTo, loserId);
+  if (m.slot === 'GF1') {
+    updated = updated.map((mm) => (mm.slot === 'GF2' ? { ...mm, playerAId: null, playerBId: null, status: 'pending' as const } : mm));
+  }
+
+  return { matches: updated, winnerId: m.winnerId, loserId };
 }

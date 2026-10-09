@@ -1,6 +1,7 @@
 import { get, onValue, ref, set as dbSet } from 'firebase/database';
 import { db } from '../firebase';
 import { useStore, freshSyncedState } from '../store/useStore';
+import { useSyncStatus } from '../store/useSyncStatus';
 import type { Guest, Player, SyncedState } from '../types';
 
 const SYNCED_KEYS = ['players', 'guests', 'seedSlots', 'matches', 'wallets', 'transactions', 'bets', 'phase'] as const;
@@ -87,6 +88,7 @@ export async function addGuestToRoom(code: string, guest: Guest): Promise<void> 
 
 let unsubscribeSnapshot: (() => void) | null = null;
 let unsubscribeStore: (() => void) | null = null;
+let unsubscribeConnection: (() => void) | null = null;
 let applyingRemote = false;
 let pushTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -97,6 +99,13 @@ let pushTimer: ReturnType<typeof setTimeout> | null = null;
  */
 export function startRoomSync(code: string) {
   stopRoomSync();
+
+  // Firebase's special ".info/connected" path reflects this client's own
+  // socket state (not just "is the internet up") - the one signal that
+  // tells the UI a bet or deposit might not actually have gone through yet.
+  unsubscribeConnection = onValue(ref(db, '.info/connected'), (snap) => {
+    useSyncStatus.getState().setStatus(snap.val() === true ? 'connected' : 'offline');
+  });
 
   unsubscribeSnapshot = onValue(roomRef(code), (snap) => {
     const data = snap.val() as Partial<SyncedState> | null;
@@ -113,9 +122,18 @@ export function startRoomSync(code: string) {
     prev = next;
     if (pushTimer) clearTimeout(pushTimer);
     pushTimer = setTimeout(() => {
-      dbSet(roomRef(code), next).catch((err) => {
-        console.error('room sync push failed', err);
-      });
+      dbSet(roomRef(code), next)
+        .then(() => {
+          // a push landing again after a failure means we've recovered - follow the
+          // live socket state rather than hardcoding "connected" in case it dropped again meanwhile
+          if (useSyncStatus.getState().status === 'error') {
+            useSyncStatus.getState().setStatus('connected');
+          }
+        })
+        .catch((err) => {
+          console.error('room sync push failed', err);
+          useSyncStatus.getState().setStatus('error');
+        });
     }, 250);
   });
 }
@@ -125,6 +143,9 @@ export function stopRoomSync() {
   unsubscribeSnapshot = null;
   unsubscribeStore?.();
   unsubscribeStore = null;
+  unsubscribeConnection?.();
+  unsubscribeConnection = null;
   if (pushTimer) clearTimeout(pushTimer);
   pushTimer = null;
+  useSyncStatus.getState().setStatus('idle');
 }

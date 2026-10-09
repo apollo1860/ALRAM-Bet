@@ -329,6 +329,12 @@ header {
   font-size: 0.78rem;
 }
 
+.sync-status-offline,
+.sync-status-error {
+  color: var(--danger);
+  font-weight: 700;
+}
+
 .two-col {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -706,6 +712,24 @@ button.danger {
   font-weight: 600;
 }
 
+.correct-result-btn {
+  margin-top: 10px;
+  min-height: 32px;
+  padding: 5px 10px;
+  font-size: 0.72rem;
+  width: auto;
+}
+
+.correct-result-confirm {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--border);
+}
+
+.correct-result-confirm .button-col {
+  margin-top: 8px;
+}
+
 /* ---------- Betting ---------- */
 
 .bet-list {
@@ -1007,4 +1031,39 @@ button.danger {
   font-size: 0.92rem;
   line-height: 1.5;
   color: var(--text);
+}
+
+/* ---------- Guest name prompt overlay ---------- */
+
+.guest-prompt-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 110;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  animation: pulse-backdrop-in 0.2s ease both;
+}
+
+.guest-prompt-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+  padding: 20px;
+  width: 100%;
+  max-width: 360px;
+}
+
+.guest-prompt-card h3 {
+  margin: 0 0 6px;
+}
+
+.guest-prompt-card input {
+  width: 100%;
+  margin: 12px 0 4px;
 }

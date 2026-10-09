@@ -4,9 +4,11 @@ import type { Bet, Guest, Match, Phase, Player, SyncedState, Transaction } from 
 import {
   BYE,
   buildDoubleEliminationBracket,
+  canCorrectMatch,
   isWinnersBracketStage,
   propagateLoser,
   propagateWinner,
+  revertMatchResult,
   settleByes,
 } from '../lib/bracket';
 import { poolOdds, updateRating, winProbability } from '../lib/odds';
@@ -33,6 +35,9 @@ interface State {
   /** Build the double-elimination bracket from the current seed slots. Returns an error message, or null on success. */
   startBracket: () => string | null;
   enterMatchResult: (matchId: string, scoreA: number, scoreB: number) => void;
+  /** Undo an admin's typo'd result and put the match back up for re-entry. Returns an error message
+   *  (nothing happens) if anything downstream has already moved on, or null on success. */
+  correctMatchResult: (matchId: string) => string | null;
   lockMatch: (matchId: string) => void;
   depositCoins: (playerId: string, amount: number) => void;
   placeBet: (matchId: string, bettorId: string, pickedPlayerId: string, amount: number) => string | null;
@@ -95,14 +100,21 @@ function markEliminated(players: Player[], loserId: string): Player[] {
   return players.map((p) => (p.id === loserId ? { ...p, eliminated: true } : p));
 }
 
-/** Fill in a fair win-probability snapshot for every match that now has both players but no snapshot yet. */
+/** Fill in a fair win-probability snapshot for every match that now has both players but no snapshot yet -
+ *  alongside each player's rating right before the match, so a later result correction can restore it exactly. */
 function stampFairProbs(players: Player[], matches: Match[]): Match[] {
   return matches.map((m) => {
     if (m.fairProbA !== null || !m.playerAId || !m.playerBId) return m;
     const pa = players.find((p) => p.id === m.playerAId);
     const pb = players.find((p) => p.id === m.playerBId);
     if (!pa || !pb) return m;
-    return { ...m, fairProbA: winProbability(pa.currentRating, pb.currentRating), status: m.status === 'pending' ? 'ready' : m.status };
+    return {
+      ...m,
+      fairProbA: winProbability(pa.currentRating, pb.currentRating),
+      preMatchRatingA: pa.currentRating,
+      preMatchRatingB: pb.currentRating,
+      status: m.status === 'pending' ? 'ready' : m.status,
+    };
   });
 }
 
@@ -197,6 +209,56 @@ export const useStore = create<State>()(
         set({ players: updatedPlayers, matches: updatedMatches, phase });
 
         get()._resolveBetsFor(matchId, winnerId, finished);
+      },
+
+      correctMatchResult: (matchId) => {
+        const { matches, players, bets, wallets, transactions } = get();
+        if (!canCorrectMatch(matches, matchId)) {
+          return 'Dieses Ergebnis kann nicht mehr korrigiert werden - es wurde schon weitergespielt oder es liegen Wetten auf dem Folgespiel.';
+        }
+        const original = matches.find((m) => m.id === matchId)!;
+        const reverted = revertMatchResult(matches, matchId);
+        if (!reverted) return 'Ergebnis nicht gefunden.';
+        const { matches: revertedMatches, winnerId, loserId } = reverted;
+
+        let updatedPlayers = players;
+        if (original.preMatchRatingA !== null && original.preMatchRatingB !== null) {
+          updatedPlayers = players.map((p) => {
+            if (p.id === original.playerAId) return { ...p, currentRating: original.preMatchRatingA! };
+            if (p.id === original.playerBId) return { ...p, currentRating: original.preMatchRatingB! };
+            return p;
+          });
+        }
+
+        let phase: Phase = get().phase;
+        const wasOutrightGF1 = original.slot === 'GF1' && winnerId === original.playerAId;
+        if (wasOutrightGF1 || original.slot === 'GF2') {
+          updatedPlayers = updatedPlayers.map((p) => (p.id === loserId ? { ...p, eliminated: false } : p));
+          phase = 'knockout';
+        } else if (!isWinnersBracketStage(original.stage) && original.stage !== 'gf') {
+          updatedPlayers = updatedPlayers.map((p) => (p.id === loserId ? { ...p, eliminated: false } : p));
+        }
+        // a WB-stage loss, or the LB side winning GF1, never eliminated anyone - nothing to undo there
+
+        // put every bet on this match back to open, reversing any payout already credited
+        const newWallets = { ...wallets };
+        for (const b of bets) {
+          if (b.matchId === matchId && b.status === 'won' && b.payout) {
+            newWallets[b.bettorId] = (newWallets[b.bettorId] ?? 0) - b.payout;
+          }
+        }
+        const updatedBets = bets.map((b) => (b.matchId === matchId ? { ...b, status: 'open' as const, payout: null } : b));
+        const updatedTransactions = transactions.filter((t) => !(t.type === 'payout' && t.note === matchId));
+
+        set({
+          players: updatedPlayers,
+          matches: revertedMatches,
+          phase,
+          wallets: newWallets,
+          bets: updatedBets,
+          transactions: updatedTransactions,
+        });
+        return null;
       },
 
       lockMatch: (matchId) =>

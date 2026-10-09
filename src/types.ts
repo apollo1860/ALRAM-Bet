@@ -39,6 +39,10 @@ export interface Match {
   status: 'pending' | 'ready' | 'live' | 'finished';
   /** Fair (algorithmic) win probability for player A, snapshotted when the match becomes ready. */
   fairProbA: number | null;
+  /** Each player's currentRating right before this match was played, snapshotted alongside fairProbA -
+   *  lets an admin's result correction restore ratings exactly, without recomputing the whole tournament. */
+  preMatchRatingA: number | null;
+  preMatchRatingB: number | null;
   poolA: number;
   poolB: number;
 }

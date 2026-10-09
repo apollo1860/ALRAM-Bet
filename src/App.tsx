@@ -10,6 +10,7 @@ import { Betting } from './components/Betting';
 import { Wallet } from './components/Wallet';
 import { Payout } from './components/Payout';
 import { Disclaimer } from './components/Disclaimer';
+import { useSyncStatus, type SyncStatus } from './store/useSyncStatus';
 import { ADMIN_ID } from './lib/format';
 
 // Firebase and the room-gate UI are only needed in multi-device mode, so
@@ -26,13 +27,23 @@ const TABS: { id: Tab; label: string; icon: string }[] = [
   { id: 'payout', label: 'Abrechnung', icon: '🧾' },
 ];
 
+const SYNC_STATUS_LABEL: Record<SyncStatus, string> = {
+  idle: '⏳ Verbinde...',
+  connected: '🟢 Verbunden',
+  offline: '🔴 Keine Verbindung',
+  error: '⚠️ Sync fehlgeschlagen',
+};
+
 function ConnectionBar() {
   const roomCode = useAppMode((s) => s.roomCode);
   const setMode = useAppMode((s) => s.setMode);
+  const status = useSyncStatus((s) => s.status);
 
   return (
     <div className="connection-bar">
-      <span>🌐 Raum {roomCode}</span>
+      <span>
+        🌐 Raum {roomCode} · <span className={`sync-status sync-status-${status}`}>{SYNC_STATUS_LABEL[status]}</span>
+      </span>
       <button className="button-secondary" onClick={() => setMode(null)}>
         Raum verlassen
       </button>

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useStore } from '../store/useStore';
-import { BYE, computePlacements } from '../lib/bracket';
+import { BYE, canCorrectMatch, computePlacements } from '../lib/bracket';
 import { playerName } from '../lib/format';
 import type { Match, MatchStage } from '../types';
 
@@ -35,12 +35,17 @@ function PlayerLine({ name, isWinner, isDone }: { name: string; isWinner: boolea
 
 function MatchCard({ match, isAdmin }: { match: Match; isAdmin: boolean }) {
   const players = useStore((s) => s.players);
+  const matches = useStore((s) => s.matches);
   const enterMatchResult = useStore((s) => s.enterMatchResult);
+  const correctMatchResult = useStore((s) => s.correctMatchResult);
+  const [confirming, setConfirming] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const nameA = playerName(players, match.playerAId);
   const nameB = playerName(players, match.playerBId);
   const ready = match.playerAId && match.playerBId;
   const done = match.status === 'finished';
   const isBye = match.playerAId === BYE || match.playerBId === BYE;
+  const correctable = isAdmin && done && !isBye && canCorrectMatch(matches, match.id);
 
   return (
     <div className={`bracket-match ${match.status}`}>
@@ -54,6 +59,33 @@ function MatchCard({ match, isAdmin }: { match: Match; isAdmin: boolean }) {
       ) : (
         <div className="hint">{ready ? 'offen' : 'wartet auf Gegner'}</div>
       )}
+
+      {correctable && !confirming && (
+        <button className="button-secondary correct-result-btn" onClick={() => setConfirming(true)}>
+          ✏️ Ergebnis korrigieren
+        </button>
+      )}
+      {correctable && confirming && (
+        <div className="correct-result-confirm">
+          <p className="hint">Sicher? Schon ausgezahlte Wetten auf dieses Spiel werden zurückgesetzt.</p>
+          <div className="button-col">
+            <button
+              className="danger"
+              onClick={() => {
+                const err = correctMatchResult(match.id);
+                if (err) setError(err);
+                setConfirming(false);
+              }}
+            >
+              Ja, zurücksetzen
+            </button>
+            <button className="button-secondary" onClick={() => setConfirming(false)}>
+              Abbrechen
+            </button>
+          </div>
+        </div>
+      )}
+      {error && <p className="error">{error}</p>}
     </div>
   );
 }

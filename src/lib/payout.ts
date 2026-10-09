@@ -66,7 +66,7 @@ export function computeFinalPayout(
   }
 
   const totalPot = Object.values(deposited).reduce((a, b) => a + b, 0);
-  const finalCoins = identities.map((p) => Math.max(0, wallets[p.id] ?? 0));
+  const finalCoins = identities.map((p) => Math.round(Math.max(0, wallets[p.id] ?? 0)));
   const totalCoins = finalCoins.reduce((a, b) => a + b, 0);
   const payouts = apportion(finalCoins, totalPot);
 

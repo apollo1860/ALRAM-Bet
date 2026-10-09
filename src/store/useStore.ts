@@ -289,20 +289,22 @@ export const useStore = create<State>()(
         })),
 
       depositCoins: (playerId, amount) => {
-        if (amount <= 0) return;
+        // Coins are always whole numbers - 1€ = 1 Coin, and nobody deposits fractional euros here.
+        const wholeAmount = Math.round(amount);
+        if (wholeAmount <= 0) return;
         set((state) => {
           const depositorName = playerName(state.players, playerId, state.guests);
           const otherIds = [...state.players.map((p) => p.id), ...state.guests.map((g) => g.id)].filter(
             (id) => id !== playerId
           );
           const notifications = otherIds.map((id) =>
-            createMessage(id, 'deposit', `💶 ${depositorName} hat ${fmtCoins(amount)} eingezahlt.`)
+            createMessage(id, 'deposit', `💶 ${depositorName} hat ${fmtCoins(wholeAmount)} eingezahlt.`)
           );
           return {
-            wallets: { ...state.wallets, [playerId]: (state.wallets[playerId] ?? 0) + amount },
+            wallets: { ...state.wallets, [playerId]: (state.wallets[playerId] ?? 0) + wholeAmount },
             transactions: [
               ...state.transactions,
-              { id: crypto.randomUUID(), playerId, type: 'deposit', amount, createdAt: Date.now() },
+              { id: crypto.randomUUID(), playerId, type: 'deposit', amount: wholeAmount, createdAt: Date.now() },
             ],
             messages: [...state.messages, ...notifications],
           };
@@ -342,9 +344,11 @@ export const useStore = create<State>()(
         if (bettorId === match.playerAId || bettorId === match.playerBId) {
           return 'Du kannst nicht auf dein eigenes Spiel wetten.';
         }
-        if (amount <= 0) return 'Ungültiger Betrag.';
+        // Coins are always whole numbers - round the stake the same way deposits are.
+        const wholeAmount = Math.round(amount);
+        if (wholeAmount <= 0) return 'Ungültiger Betrag.';
         const balance = state.wallets[bettorId] ?? 0;
-        if (balance < amount) return 'Nicht genug Guthaben.';
+        if (balance < wholeAmount) return 'Nicht genug Guthaben.';
         const alreadyBet = state.bets.some((b) => b.matchId === matchId && b.bettorId === bettorId && b.status === 'open');
         if (alreadyBet) return 'Du hast auf dieses Spiel schon getippt.';
 
@@ -359,7 +363,7 @@ export const useStore = create<State>()(
           matchId,
           bettorId,
           pickedPlayerId,
-          amount,
+          amount: wholeAmount,
           oddsAtPlacement: currentOdds,
           status: 'open',
           payout: null,
@@ -367,18 +371,25 @@ export const useStore = create<State>()(
         };
 
         set({
-          wallets: { ...state.wallets, [bettorId]: balance - amount },
+          wallets: { ...state.wallets, [bettorId]: balance - wholeAmount },
           bets: [...state.bets, bet],
           matches: state.matches.map((m) =>
             m.id === matchId
               ? isSideA
-                ? { ...m, poolA: m.poolA + amount }
-                : { ...m, poolB: m.poolB + amount }
+                ? { ...m, poolA: m.poolA + wholeAmount }
+                : { ...m, poolB: m.poolB + wholeAmount }
               : m
           ),
           transactions: [
             ...state.transactions,
-            { id: crypto.randomUUID(), playerId: bettorId, type: 'bet', amount: -amount, createdAt: Date.now(), note: matchId },
+            {
+              id: crypto.randomUUID(),
+              playerId: bettorId,
+              type: 'bet',
+              amount: -wholeAmount,
+              createdAt: Date.now(),
+              note: matchId,
+            },
           ],
         });
         return null;
@@ -405,7 +416,8 @@ export const useStore = create<State>()(
           if (b.matchId !== matchId || b.status !== 'open') return b;
           const pickName = playerName(state.players, b.pickedPlayerId, state.guests);
           if (b.pickedPlayerId === winnerId) {
-            const payout = Math.round(b.amount * finalOdds * 100) / 100;
+            // whole coins only, same as every other coin amount in the app
+            const payout = Math.round(b.amount * finalOdds);
             wallets[b.bettorId] = (wallets[b.bettorId] ?? 0) + payout;
             newTx.push({ id: crypto.randomUUID(), playerId: b.bettorId, type: 'payout', amount: payout, createdAt: Date.now(), note: matchId });
             newMsgs.push(

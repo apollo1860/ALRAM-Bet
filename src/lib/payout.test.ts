@@ -32,6 +32,16 @@ function finishedMatch(slot: string, winnerId: string, loserId: string): Match {
 }
 
 describe('computeFinalPayout', () => {
+  it('rounds a stray fractional wallet value to a whole coin before splitting the pot', () => {
+    const players = [player('a'), player('b')];
+    const transactions = [deposit('a', 10), deposit('b', 10)];
+    const wallets = { a: 12.7, b: 7.3 };
+
+    const { rows } = computeFinalPayout(players, [], wallets, transactions);
+    expect(rows.find((r) => r.playerId === 'a')?.finalCoins).toBe(13);
+    expect(rows.find((r) => r.playerId === 'b')?.finalCoins).toBe(7);
+  });
+
   it('always pays out exactly the total deposited pot, never more', () => {
     const players = [player('a'), player('b'), player('c')];
     const transactions = [deposit('a', 10), deposit('b', 20), deposit('c', 33)];

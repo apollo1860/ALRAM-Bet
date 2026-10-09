@@ -12,7 +12,8 @@ export function playerName(players: Player[], id: string | null, guests: Guest[]
 }
 
 export function fmtCoins(n: number): string {
-  return `${n.toLocaleString('de-DE', { maximumFractionDigits: 2 })} Coins`;
+  // Coins are always whole numbers - round away any stray fraction rather than showing decimals.
+  return `${Math.round(n).toLocaleString('de-DE')} Coins`;
 }
 
 export function fmtCoinsShort(n: number): string {

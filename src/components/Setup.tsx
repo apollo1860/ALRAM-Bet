@@ -1,4 +1,5 @@
 import { useStore } from '../store/useStore';
+import { useAppMode } from '../store/useAppMode';
 import { fmtCoins, fmtOdds, playerName } from '../lib/format';
 import { decimalOddsFromRating } from '../lib/odds';
 
@@ -61,8 +62,18 @@ export function Setup({ isAdmin }: { isAdmin: boolean }) {
   const phase = useStore((s) => s.phase);
   const updatePlayer = useStore((s) => s.updatePlayer);
   const resetTournament = useStore((s) => s.resetTournament);
+  const setMode = useAppMode((s) => s.setMode);
 
   const editable = phase === 'setup' && isAdmin;
+
+  function handleEndTournament() {
+    if (!confirm('Wirklich alles beenden und zurücksetzen? Das kann nicht rückgängig gemacht werden.')) return;
+    resetTournament();
+    // Back to "Wie willst du testen?" so a fresh test run starts from the very
+    // top - re-picking Einzelgerät/Mehrgeräte-Raum, not just a reset tournament
+    // sitting underneath the mode this device happened to be in already.
+    setMode(null);
+  }
 
   return (
     <>
@@ -128,10 +139,7 @@ export function Setup({ isAdmin }: { isAdmin: boolean }) {
             Setzt Spieler, Gäste, Quoten, Bracket, Wallets, Wetten und Nachrichten komplett zurück auf den
             Anfangszustand - z.B. um das Turnier neu zu testen. Das kann nicht rückgängig gemacht werden.
           </p>
-          <button
-            className="danger"
-            onClick={() => confirm('Wirklich alles beenden und zurücksetzen? Das kann nicht rückgängig gemacht werden.') && resetTournament()}
-          >
+          <button className="danger" onClick={handleEndTournament}>
             Turnier beenden &amp; zurücksetzen
           </button>
         </div>

@@ -527,15 +527,8 @@ button.danger {
   box-shadow: 0 3px 10px color-mix(in srgb, var(--danger) 30%, transparent);
 }
 
-.card > button,
-.danger-zone > button {
+.card > button {
   width: 100%;
-}
-
-.danger-zone {
-  margin-top: 14px;
-  padding-top: 14px;
-  border-top: 1px dashed var(--border);
 }
 
 /* ---------- Tables (desktop default) ---------- */

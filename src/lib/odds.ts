@@ -41,6 +41,19 @@ export function ratingFromDecimalOdds(decimalOdds: number): number {
   return RATING_SCALE * Math.log10(p / (1 - p));
 }
 
+/**
+ * Inverse of ratingFromDecimalOdds: reconstructs a decimal-odds-style number
+ * from a rating, against the same neutral (rating 0) baseline the admin's
+ * original title odds were converted against. Used to show a live "current
+ * form" quote next to the fixed pre-tournament one - a result moves a
+ * player's currentRating, so it nudges this number too, just like it does
+ * for their individual match odds.
+ */
+export function decimalOddsFromRating(rating: number): number {
+  const p = clampProb(winProbability(rating, 0));
+  return roundOdds(1 / p);
+}
+
 /** Probability that a player with ratingA beats a player with ratingB. */
 export function winProbability(ratingA: number, ratingB: number): number {
   return 1 / (1 + Math.pow(10, (ratingB - ratingA) / RATING_SCALE));

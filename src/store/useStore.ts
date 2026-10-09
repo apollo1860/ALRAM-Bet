@@ -396,7 +396,10 @@ export const useStore = create<State>()(
         set({ wallets, bets: updatedBets, transactions: [...state.transactions, ...newTx], messages: [...state.messages, ...newMsgs] });
       },
 
-      resetTournament: () => set(freshState()),
+      // Resets only the shared tournament data, not activePlayerId - that's this device's own
+      // identity, and in a multi-device room the admin is also a real player who should stay
+      // logged in as themselves after a reset, not get bumped to the single-device "Admin" sentinel.
+      resetTournament: () => set(freshSyncedState()),
 
       applyRemoteState: (data) => set(data),
     }),

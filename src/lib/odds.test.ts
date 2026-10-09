@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { poolOdds, ratingFromDecimalOdds, updateRating, winProbability } from './odds';
+import { decimalOddsFromRating, poolOdds, ratingFromDecimalOdds, updateRating, winProbability } from './odds';
 
 describe('ratingFromDecimalOdds / winProbability', () => {
   it('gives even-money odds a 50/50 win probability against each other', () => {
@@ -33,6 +33,26 @@ describe('updateRating', () => {
     const favoriteAfterUpsetLoss = updateRating(favorite, underdog, 0);
     expect(favoriteAfterExpectedWin - favorite).toBeLessThan(5);
     expect(favorite - favoriteAfterUpsetLoss).toBeGreaterThan(30);
+  });
+});
+
+describe('decimalOddsFromRating', () => {
+  it('round-trips roughly back to the original decimal odds for a fresh (untouched) rating', () => {
+    const original = 2.5;
+    const rating = ratingFromDecimalOdds(original);
+    expect(decimalOddsFromRating(rating)).toBeCloseTo(original, 1);
+  });
+
+  it('shortens (shrinks toward 1) after a win and lengthens after a loss - a result nudges the live quote', () => {
+    const startRating = ratingFromDecimalOdds(3);
+    const oddsBefore = decimalOddsFromRating(startRating);
+
+    const opponentRating = ratingFromDecimalOdds(3); // an even-strength opponent
+    const afterWin = updateRating(startRating, opponentRating, 1);
+    const afterLoss = updateRating(startRating, opponentRating, 0);
+
+    expect(decimalOddsFromRating(afterWin)).toBeLessThan(oddsBefore);
+    expect(decimalOddsFromRating(afterLoss)).toBeGreaterThan(oddsBefore);
   });
 });
 

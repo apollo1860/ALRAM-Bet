@@ -1,5 +1,6 @@
 import { useStore } from '../store/useStore';
-import { fmtCoins, playerName } from '../lib/format';
+import { fmtCoins, fmtOdds, playerName } from '../lib/format';
+import { decimalOddsFromRating } from '../lib/odds';
 
 function DepositLog() {
   const players = useStore((s) => s.players);
@@ -56,11 +57,19 @@ export function Setup({ isAdmin }: { isAdmin: boolean }) {
           Sieg/Niederlage im Turnierverlauf an.
         </p>
         {!isAdmin && <p className="hint">Nur der Admin kann Spieler und Quoten bearbeiten.</p>}
+        {phase !== 'setup' && (
+          <p className="hint">
+            „Aktuelle Form“ bewegt sich mit jedem Ergebnis ein Stück (Sieg gegen einen Favoriten zieht die Quote
+            stärker nach unten als gegen einen Außenseiter) - die Gesamtsieg-Quote links bleibt die fixe
+            Ausgangsquote von vor dem Turnier.
+          </p>
+        )}
         <table className="table stack">
           <thead>
             <tr>
               <th>Name</th>
               <th>Gesamtsieg-Quote</th>
+              {phase !== 'setup' && <th>Aktuelle Form</th>}
             </tr>
           </thead>
           <tbody>
@@ -84,20 +93,32 @@ export function Setup({ isAdmin }: { isAdmin: boolean }) {
                     onChange={(e) => updatePlayer(p.id, { initialOdds: Number(e.target.value) })}
                   />
                 </td>
+                {phase !== 'setup' && (
+                  <td data-label="Aktuelle Form">
+                    <strong>{fmtOdds(decimalOddsFromRating(p.currentRating))}</strong>
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>
         </table>
         {editable && <p className="hint">Weiter geht's im K.O.-Tab: dort die Bracket-Positionen zuweisen und starten.</p>}
-        {isAdmin && !editable && (
-          <div className="danger-zone">
-            <p className="hint">Turnier läuft bereits (Phase: {phase}).</p>
-            <button className="danger" onClick={() => confirm('Wirklich das ganze Turnier zurücksetzen?') && resetTournament()}>
-              Turnier zurücksetzen
-            </button>
-          </div>
-        )}
       </div>
+      {isAdmin && (
+        <div className="card">
+          <h2>Alles beenden</h2>
+          <p className="hint">
+            Setzt Spieler, Gäste, Quoten, Bracket, Wallets, Wetten und Nachrichten komplett zurück auf den
+            Anfangszustand - z.B. um das Turnier neu zu testen. Das kann nicht rückgängig gemacht werden.
+          </p>
+          <button
+            className="danger"
+            onClick={() => confirm('Wirklich alles beenden und zurücksetzen? Das kann nicht rückgängig gemacht werden.') && resetTournament()}
+          >
+            Turnier beenden &amp; zurücksetzen
+          </button>
+        </div>
+      )}
       {isAdmin && <DepositLog />}
     </>
   );

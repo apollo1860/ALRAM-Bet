@@ -9,6 +9,7 @@ import { Bracket } from './components/Bracket';
 import { Betting } from './components/Betting';
 import { Wallet } from './components/Wallet';
 import { Payout } from './components/Payout';
+import { Disclaimer } from './components/Disclaimer';
 import { ADMIN_ID } from './lib/format';
 
 // Firebase and the room-gate UI are only needed in multi-device mode, so
@@ -44,6 +45,7 @@ function MainApp({ isMulti }: { isMulti: boolean }) {
   const activePlayerId = useStore((s) => s.activePlayerId);
   const phase = useStore((s) => s.phase);
   const isRoomAdmin = useAppMode((s) => s.isRoomAdmin);
+  const hasSeenDisclaimer = useAppMode((s) => s.hasSeenDisclaimer);
   // Single-device mode simulates everyone via the ADMIN_ID dropdown choice;
   // multi-device mode tracks admin rights separately, since the room
   // creator is also a real player with their own wallet.
@@ -52,6 +54,7 @@ function MainApp({ isMulti }: { isMulti: boolean }) {
 
   return (
     <div className="app">
+      {!hasSeenDisclaimer && <Disclaimer />}
       <header>
         <span className="brand">🏓 ALRAM Bet</span>
         <PlayerSwitcher />

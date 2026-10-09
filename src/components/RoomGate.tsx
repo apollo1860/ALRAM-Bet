@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useAppMode } from '../store/useAppMode';
 import { useStore } from '../store/useStore';
-import { createRoomDoc, generateRoomCode, getRoomPlayers, roomExists } from '../lib/roomSync';
+import { addGuestToRoom, createRoomDoc, generateRoomCode, getRoomPlayers, roomExists } from '../lib/roomSync';
 import type { Player } from '../types';
 
 type Screen = 'choice' | 'create' | 'join-code' | 'identity';
@@ -19,6 +19,7 @@ export function RoomGate() {
   const [joinInput, setJoinInput] = useState('');
   const [roster, setRoster] = useState<Player[]>([]);
   const [pickedPlayerId, setPickedPlayerId] = useState<string | null>(null);
+  const [guestName, setGuestName] = useState('');
 
   async function handleCreate() {
     setBusy(true);
@@ -85,6 +86,23 @@ export function RoomGate() {
     setActivePlayer(pickedPlayerId);
     setIsRoomAdmin(enteringAsAdmin);
     setRoomCode(pendingCode);
+  }
+
+  async function joinAsGuest() {
+    if (!pendingCode || !guestName.trim()) return;
+    setError(null);
+    setBusy(true);
+    try {
+      const id = `guest-${crypto.randomUUID()}`;
+      await addGuestToRoom(pendingCode, { id, name: guestName.trim() });
+      setActivePlayer(id);
+      setIsRoomAdmin(false);
+      setRoomCode(pendingCode);
+    } catch (e) {
+      setError(`Konnte nicht als Gast beitreten. (${(e as Error).message})`);
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
@@ -186,6 +204,24 @@ export function RoomGate() {
                 Zurück
               </button>
             </div>
+
+            {!enteringAsAdmin && (
+              <div className="guest-join">
+                <p className="hint">
+                  Spielst du nicht selbst mit? Als Gast kannst du trotzdem auf alle Spiele tippen.
+                </p>
+                <input
+                  type="text"
+                  placeholder="Dein Name"
+                  value={guestName}
+                  onChange={(e) => setGuestName(e.target.value)}
+                  maxLength={24}
+                />
+                <button className="button-secondary" disabled={busy || !guestName.trim()} onClick={joinAsGuest}>
+                  Als Gast beitreten
+                </button>
+              </div>
+            )}
           </>
         )}
 

@@ -1,4 +1,4 @@
-import type { Player, Transaction } from '../types';
+import type { Guest, Player, Transaction } from '../types';
 
 export interface PayoutRow {
   playerId: string;
@@ -44,31 +44,35 @@ function apportion(weights: number[], total: number): number[] {
 /**
  * Final settlement: everyone's real-money deposits form one pot ("die
  * Tasse"), and at the end it's split back out in proportion to each
- * player's final coin balance - how well they did across all their bets,
+ * person's final coin balance - how well they did across all their bets,
  * not just what they put in. Whole numbers only, and they always add up to
- * exactly the total pot.
+ * exactly the total pot. Guests deposit and bet just like tournament
+ * players, so they're settled the same way - they just never appear in the
+ * bracket itself.
  */
 export function computeFinalPayout(
   players: Player[],
+  guests: Guest[],
   wallets: Record<string, number>,
   transactions: Transaction[]
 ): { totalPot: number; rows: PayoutRow[] } {
+  const identities: { id: string }[] = [...players, ...guests];
   const deposited: Record<string, number> = {};
-  for (const p of players) deposited[p.id] = 0;
+  for (const p of identities) deposited[p.id] = 0;
   for (const t of transactions) {
     if (t.type === 'deposit' && t.playerId in deposited) deposited[t.playerId] += t.amount;
   }
 
   const totalPot = Object.values(deposited).reduce((a, b) => a + b, 0);
-  const finalCoins = players.map((p) => Math.max(0, wallets[p.id] ?? 0));
+  const finalCoins = identities.map((p) => Math.max(0, wallets[p.id] ?? 0));
   const totalCoins = finalCoins.reduce((a, b) => a + b, 0);
   const payouts = apportion(finalCoins, totalPot);
 
-  const rows: PayoutRow[] = players.map((p, i) => ({
+  const rows: PayoutRow[] = identities.map((p, i) => ({
     playerId: p.id,
     deposited: deposited[p.id],
     finalCoins: finalCoins[i],
-    sharePercent: totalCoins > 0 ? (finalCoins[i] / totalCoins) * 100 : 100 / players.length,
+    sharePercent: totalCoins > 0 ? (finalCoins[i] / totalCoins) * 100 : 100 / identities.length,
     payout: payouts[i],
   }));
 

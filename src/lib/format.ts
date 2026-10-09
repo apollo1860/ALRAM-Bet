@@ -1,10 +1,14 @@
-import type { Player } from '../types';
+import type { Guest, Player } from '../types';
 import { BYE } from './bracket';
 
-export function playerName(players: Player[], id: string | null): string {
+export function playerName(players: Player[], id: string | null, guests: Guest[] = []): string {
   if (!id) return '???';
   if (id === BYE) return 'Freilos';
-  return players.find((p) => p.id === id)?.name ?? '???';
+  const player = players.find((p) => p.id === id);
+  if (player) return player.name;
+  const guest = guests.find((g) => g.id === id);
+  if (guest) return `${guest.name} (Gast)`;
+  return '???';
 }
 
 export function fmtCoins(n: number): string {

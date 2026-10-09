@@ -10,9 +10,13 @@ interface AppModeState {
    *  which player identity that device picked - the creator is also a real
    *  player with their own wallet, just with admin rights on top. */
   isRoomAdmin: boolean;
+  /** True once this device has dismissed the risk disclaimer - shown only once, ever, regardless
+   *  of mode/room switches, so it's not reset by setMode like roomCode/isRoomAdmin are. */
+  hasSeenDisclaimer: boolean;
   setMode: (mode: AppMode | null) => void;
   setRoomCode: (roomCode: string | null) => void;
   setIsRoomAdmin: (isRoomAdmin: boolean) => void;
+  dismissDisclaimer: () => void;
 }
 
 /**
@@ -26,9 +30,11 @@ export const useAppMode = create<AppModeState>()(
       mode: null,
       roomCode: null,
       isRoomAdmin: false,
+      hasSeenDisclaimer: false,
       setMode: (mode) => set({ mode, roomCode: null, isRoomAdmin: false }),
       setRoomCode: (roomCode) => set({ roomCode }),
       setIsRoomAdmin: (isRoomAdmin) => set({ isRoomAdmin }),
+      dismissDisclaimer: () => set({ hasSeenDisclaimer: true }),
     }),
     { name: 'alram-bet-mode' }
   )

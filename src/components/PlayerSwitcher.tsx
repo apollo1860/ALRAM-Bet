@@ -2,8 +2,12 @@ import { useStore } from '../store/useStore';
 import { useAppMode } from '../store/useAppMode';
 import { ADMIN_ID, fmtCoinsShort, playerName } from '../lib/format';
 
+const NEW_GUEST = '__new_guest__';
+
 export function PlayerSwitcher() {
   const players = useStore((s) => s.players);
+  const guests = useStore((s) => s.guests);
+  const addGuest = useStore((s) => s.addGuest);
   const activePlayerId = useStore((s) => s.activePlayerId);
   const setActivePlayer = useStore((s) => s.setActivePlayer);
   const wallets = useStore((s) => s.wallets);
@@ -21,7 +25,7 @@ export function PlayerSwitcher() {
       <div className="player-switcher">
         {balance !== null && <span className="balance-pill">{fmtCoinsShort(balance)}</span>}
         <span className="identity-label">
-          {playerName(players, activePlayerId)}
+          {playerName(players, activePlayerId, guests)}
           {isRoomAdmin && ' 🛠'}
         </span>
       </div>
@@ -34,7 +38,15 @@ export function PlayerSwitcher() {
       <select
         aria-label="Aktive Identität wählen"
         value={activePlayerId ?? ''}
-        onChange={(e) => setActivePlayer(e.target.value)}
+        onChange={(e) => {
+          const value = e.target.value;
+          if (value === NEW_GUEST) {
+            const name = window.prompt('Dein Name als Gast:');
+            if (name && name.trim()) setActivePlayer(addGuest(name));
+            return;
+          }
+          setActivePlayer(value);
+        }}
       >
         <option value={ADMIN_ID}>🛠 Admin</option>
         {players.map((p) => (
@@ -43,6 +55,12 @@ export function PlayerSwitcher() {
             {p.eliminated ? ' ✗' : ''}
           </option>
         ))}
+        {guests.map((g) => (
+          <option key={g.id} value={g.id}>
+            👤 {g.name}
+          </option>
+        ))}
+        <option value={NEW_GUEST}>+ Neuer Gast</option>
       </select>
     </div>
   );

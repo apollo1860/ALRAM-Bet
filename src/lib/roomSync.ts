@@ -1,13 +1,14 @@
 import { get, onValue, ref, set as dbSet } from 'firebase/database';
 import { db } from '../firebase';
 import { useStore, freshSyncedState } from '../store/useStore';
-import type { Player, SyncedState } from '../types';
+import type { Guest, Player, SyncedState } from '../types';
 
-const SYNCED_KEYS = ['players', 'seedSlots', 'matches', 'wallets', 'transactions', 'bets', 'phase'] as const;
+const SYNCED_KEYS = ['players', 'guests', 'seedSlots', 'matches', 'wallets', 'transactions', 'bets', 'phase'] as const;
 
 function pickSynced(state: ReturnType<typeof useStore.getState>): SyncedState {
   return {
     players: state.players,
+    guests: state.guests,
     seedSlots: state.seedSlots,
     matches: state.matches,
     wallets: state.wallets,
@@ -25,6 +26,7 @@ function normalizeSyncedState(raw: Partial<SyncedState> | null): SyncedState {
   const fresh = freshSyncedState();
   return {
     players: raw?.players ?? fresh.players,
+    guests: raw?.guests ?? [],
     seedSlots: raw?.seedSlots ?? fresh.seedSlots,
     matches: raw?.matches ?? [],
     wallets: raw?.wallets ?? fresh.wallets,
@@ -68,6 +70,19 @@ export async function getRoomPlayers(code: string): Promise<Player[]> {
 /** Create a brand new room, starting from a fresh (unstarted) tournament. */
 export async function createRoomDoc(code: string): Promise<void> {
   await withTimeout(dbSet(roomRef(code), freshSyncedState()));
+}
+
+/**
+ * Write a new guest straight into the room, before this device switches
+ * into it. Room sync only starts once `roomCode` is set locally, and its
+ * very first snapshot would otherwise overwrite a guest added purely in the
+ * local store with the older remote state that doesn't have them yet - so
+ * guests are added here, directly in Firebase, ahead of that.
+ */
+export async function addGuestToRoom(code: string, guest: Guest): Promise<void> {
+  const snap = await withTimeout(get(ref(db, `rooms/${code}/guests`)));
+  const existing = (snap.val() as Guest[] | null) ?? [];
+  await withTimeout(dbSet(ref(db, `rooms/${code}/guests`), [...existing, guest]));
 }
 
 let unsubscribeSnapshot: (() => void) | null = null;

@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { Bet, Match, Phase, Player, SyncedState, Transaction } from '../types';
+import type { Bet, Guest, Match, Phase, Player, SyncedState, Transaction } from '../types';
 import {
   BYE,
   buildDoubleEliminationBracket,
@@ -15,6 +15,7 @@ import { ADMIN_ID } from '../lib/format';
 
 interface State {
   players: Player[];
+  guests: Guest[];
   seedSlots: string[];
   matches: Match[];
   wallets: Record<string, number>;
@@ -25,6 +26,9 @@ interface State {
 
   setActivePlayer: (id: string | null) => void;
   updatePlayer: (id: string, patch: Partial<Pick<Player, 'name' | 'initialOdds'>>) => void;
+  /** Add a new guest (bets only, never plays) and return their new id. Only for single-device mode -
+   *  a multi-device room writes guests straight to Firebase instead, see lib/roomSync.ts. */
+  addGuest: (name: string) => string;
   setSeedSlot: (index: number, playerId: string) => void;
   /** Build the double-elimination bracket from the current seed slots. Returns an error message, or null on success. */
   startBracket: () => string | null;
@@ -59,6 +63,7 @@ export function freshSyncedState(): SyncedState {
   const players = buildDefaultPlayers();
   return {
     players,
+    guests: [],
     seedSlots: defaultSeedSlots(players),
     matches: [],
     wallets: initialWallets(players),
@@ -117,6 +122,13 @@ export const useStore = create<State>()(
         set((state) => ({
           players: state.players.map((p) => (p.id === id ? { ...p, ...patch } : p)),
         })),
+
+      addGuest: (name) => {
+        const id = `guest-${crypto.randomUUID()}`;
+        const trimmed = name.trim() || 'Gast';
+        set((state) => ({ guests: [...state.guests, { id, name: trimmed }] }));
+        return id;
+      },
 
       setSeedSlot: (index, playerId) =>
         set((state) => {

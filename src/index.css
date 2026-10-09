@@ -297,6 +297,19 @@ header {
   color: var(--text);
 }
 
+.guest-join {
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px dashed var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.guest-join input {
+  width: 100%;
+}
+
 .connection-bar {
   display: flex;
   align-items: center;
@@ -956,4 +969,42 @@ button.danger {
   margin-top: 4px;
   opacity: 0;
   animation: pulse-text-in 0.3s ease 1.55s forwards;
+}
+
+/* ---------- Risk disclaimer overlay ---------- */
+
+.disclaimer-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 110;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  animation: pulse-backdrop-in 0.25s ease both;
+}
+
+.disclaimer-card {
+  background: var(--surface);
+  border: 1px solid var(--danger);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+  padding: 22px;
+  max-width: 420px;
+}
+
+.disclaimer-card h2 {
+  margin: 0 0 12px;
+  color: var(--danger);
+  font-size: 1.1rem;
+}
+
+.disclaimer-card p {
+  margin: 0 0 18px;
+  font-size: 0.92rem;
+  line-height: 1.5;
+  color: var(--text);
 }

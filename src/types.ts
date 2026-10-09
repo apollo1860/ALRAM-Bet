@@ -10,6 +10,12 @@ export interface Player {
   eliminated: boolean;
 }
 
+/** Someone who only bets - not part of the tournament roster, so they can bet on every match. */
+export interface Guest {
+  id: string;
+  name: string;
+}
+
 /**
  * Round columns of the 8-player double-elimination bracket.
  * wb = winners bracket, lb = losers bracket, gf = grand final.
@@ -69,6 +75,8 @@ export type Phase = 'setup' | 'knockout' | 'done';
  */
 export interface SyncedState {
   players: Player[];
+  /** Guests who only bet, never play - added on demand, not part of the fixed roster. */
+  guests: Guest[];
   /** Which fixed player sits in each of the 8 bracket slots, in draw order - editable by the admin until the bracket is started. */
   seedSlots: string[];
   matches: Match[];

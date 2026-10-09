@@ -5,6 +5,7 @@ import { fmtCoins, fmtEuro, playerName } from '../lib/format';
 
 export function Payout() {
   const players = useStore((s) => s.players);
+  const guests = useStore((s) => s.guests);
   const wallets = useStore((s) => s.wallets);
   const transactions = useStore((s) => s.transactions);
   const phase = useStore((s) => s.phase);
@@ -12,7 +13,12 @@ export function Payout() {
 
   const champion = getChampion(matches);
 
-  const { totalPot, rows } = computeFinalPayout(players, wallets, transactions);
+  // Only guests who actually took part (deposited or hold coins) clutter up the final table -
+  // someone who only ever opened the "Gast beitreten" screen shouldn't show up as a payout row.
+  const activeGuests = guests.filter(
+    (g) => (wallets[g.id] ?? 0) > 0 || transactions.some((t) => t.playerId === g.id && t.type === 'deposit')
+  );
+  const { totalPot, rows } = computeFinalPayout(players, activeGuests, wallets, transactions);
   const sortedRows = [...rows].sort((a, b) => b.payout - a.payout);
   const sumPayout = rows.reduce((a, r) => a + r.payout, 0);
 
@@ -52,7 +58,7 @@ export function Payout() {
         <tbody>
           {sortedRows.map((row) => (
             <tr key={row.playerId}>
-              <td data-label="Spieler">{playerName(players, row.playerId)}</td>
+              <td data-label="Spieler">{playerName(players, row.playerId, guests)}</td>
               <td data-label="Eingezahlt">{fmtEuro(row.deposited)}</td>
               <td data-label="Coins am Ende">{fmtCoins(row.finalCoins)}</td>
               <td data-label="Anteil">{row.sharePercent.toFixed(1)}%</td>

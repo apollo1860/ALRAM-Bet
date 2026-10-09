@@ -1,4 +1,5 @@
 import { useAppMode } from '../store/useAppMode';
+import { Logo } from './Logo';
 
 export function ModeSelect() {
   const setMode = useAppMode((s) => s.setMode);
@@ -6,6 +7,12 @@ export function ModeSelect() {
   return (
     <div className="app centered">
       <div className="card">
+        <div className="entry-brand">
+          <Logo size={56} />
+          <span className="brand-text entry-brand-text">
+            ALRAM<span className="brand-accent">BET</span>
+          </span>
+        </div>
         <h2>Wie willst du testen?</h2>
         <p className="hint">
           Auf einem Gerät simulierst du alle Spieler selbst per Umschalter. Mit mehreren Geräten treten echte Leute

@@ -101,15 +101,33 @@ header {
 .brand {
   display: flex;
   align-items: center;
-  gap: 7px;
+  gap: 9px;
+  white-space: nowrap;
+}
+
+.brand-text {
   font-family: var(--font-display);
   font-weight: 700;
   font-size: 1.15rem;
   letter-spacing: 0.02em;
   text-transform: uppercase;
-  white-space: nowrap;
-  border-bottom: 3px solid var(--gold);
-  padding-bottom: 2px;
+  color: var(--text);
+}
+
+.brand-accent {
+  color: var(--gold);
+}
+
+.entry-brand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.entry-brand-text {
+  font-size: 1.5rem;
 }
 
 .header-right {

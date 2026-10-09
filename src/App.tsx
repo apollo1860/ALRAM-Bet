@@ -4,6 +4,7 @@ import { useAppMode } from './store/useAppMode';
 import { ModeSelect } from './components/ModeSelect';
 import { PlayerSwitcher } from './components/PlayerSwitcher';
 import { Mailbox } from './components/Mailbox';
+import { Logo } from './components/Logo';
 import { Setup } from './components/Setup';
 import { Seeding } from './components/Seeding';
 import { Bracket } from './components/Bracket';
@@ -68,7 +69,12 @@ function MainApp({ isMulti }: { isMulti: boolean }) {
     <div className="app">
       {!hasSeenDisclaimer && <Disclaimer />}
       <header>
-        <span className="brand">🏓 ALRAM Bet</span>
+        <span className="brand">
+          <Logo size={30} />
+          <span className="brand-text">
+            ALRAM<span className="brand-accent">BET</span>
+          </span>
+        </span>
         <div className="header-right">
           <PlayerSwitcher />
           <Mailbox />

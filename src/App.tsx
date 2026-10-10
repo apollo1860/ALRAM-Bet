@@ -1,7 +1,7 @@
-import { lazy, Suspense, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useStore } from './store/useStore';
 import { useAppMode } from './store/useAppMode';
-import { ModeSelect } from './components/ModeSelect';
+import { RoomGate } from './components/RoomGate';
 import { PlayerSwitcher } from './components/PlayerSwitcher';
 import { Mailbox } from './components/Mailbox';
 import { Logo } from './components/Logo';
@@ -13,11 +13,7 @@ import { Wallet } from './components/Wallet';
 import { Payout } from './components/Payout';
 import { Disclaimer } from './components/Disclaimer';
 import { useSyncStatus, type SyncStatus } from './store/useSyncStatus';
-import { ADMIN_ID } from './lib/format';
-
-// Firebase and the room-gate UI are only needed in multi-device mode, so
-// keep them out of the bundle everyone downloads for single-device use.
-const RoomGate = lazy(() => import('./components/RoomGate').then((m) => ({ default: m.RoomGate })));
+import { startRoomSync, stopRoomSync } from './lib/roomSync';
 
 type Tab = 'setup' | 'knockout' | 'betting' | 'wallet' | 'payout';
 
@@ -38,7 +34,7 @@ const SYNC_STATUS_LABEL: Record<SyncStatus, string> = {
 
 function ConnectionBar() {
   const roomCode = useAppMode((s) => s.roomCode);
-  const setMode = useAppMode((s) => s.setMode);
+  const leaveRoom = useAppMode((s) => s.leaveRoom);
   const status = useSyncStatus((s) => s.status);
 
   return (
@@ -46,24 +42,21 @@ function ConnectionBar() {
       <span>
         🌐 Raum {roomCode} · <span className={`sync-status sync-status-${status}`}>{SYNC_STATUS_LABEL[status]}</span>
       </span>
-      <button className="button-secondary" onClick={() => setMode(null)}>
+      <button className="button-secondary" onClick={leaveRoom}>
         Raum verlassen
       </button>
     </div>
   );
 }
 
-function MainApp({ isMulti }: { isMulti: boolean }) {
+function MainApp() {
   const [tab, setTab] = useState<Tab>('setup');
   const activePlayerId = useStore((s) => s.activePlayerId);
   const phase = useStore((s) => s.phase);
   const isRoomAdmin = useAppMode((s) => s.isRoomAdmin);
   const hasSeenDisclaimer = useAppMode((s) => s.hasSeenDisclaimer);
-  // Single-device mode simulates everyone via the ADMIN_ID dropdown choice;
-  // multi-device mode tracks admin rights separately, since the room
-  // creator is also a real player with their own wallet.
-  const isAdmin = isMulti ? isRoomAdmin : activePlayerId === ADMIN_ID;
-  const bettorId = activePlayerId === ADMIN_ID ? null : activePlayerId;
+  const isAdmin = isRoomAdmin;
+  const bettorId = activePlayerId;
 
   return (
     <div className="app">
@@ -82,7 +75,7 @@ function MainApp({ isMulti }: { isMulti: boolean }) {
       </header>
 
       <main>
-        {isMulti && <ConnectionBar />}
+        <ConnectionBar />
         {tab === 'setup' && <Setup isAdmin={isAdmin} />}
         {tab === 'knockout' && (phase === 'setup' ? <Seeding isAdmin={isAdmin} /> : <Bracket isAdmin={isAdmin} />)}
         {tab === 'betting' && <Betting bettorId={bettorId} isAdmin={isAdmin} />}
@@ -103,33 +96,16 @@ function MainApp({ isMulti }: { isMulti: boolean }) {
 }
 
 function App() {
-  const mode = useAppMode((s) => s.mode);
   const roomCode = useAppMode((s) => s.roomCode);
 
   useEffect(() => {
-    if (mode !== 'multi' || !roomCode) return;
-    let cancelled = false;
-    let stop: (() => void) | undefined;
-    import('./lib/roomSync').then(({ startRoomSync, stopRoomSync }) => {
-      if (cancelled) return;
-      startRoomSync(roomCode);
-      stop = stopRoomSync;
-    });
-    return () => {
-      cancelled = true;
-      stop?.();
-    };
-  }, [mode, roomCode]);
+    if (!roomCode) return;
+    startRoomSync(roomCode);
+    return () => stopRoomSync();
+  }, [roomCode]);
 
-  if (!mode) return <ModeSelect />;
-  if (mode === 'multi' && !roomCode) {
-    return (
-      <Suspense fallback={<div className="app centered" />}>
-        <RoomGate />
-      </Suspense>
-    );
-  }
-  return <MainApp isMulti={mode === 'multi'} />;
+  if (!roomCode) return <RoomGate />;
+  return <MainApp />;
 }
 
 export default App;

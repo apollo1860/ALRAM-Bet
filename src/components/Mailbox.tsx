@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useStore } from '../store/useStore';
-import { ADMIN_ID } from '../lib/format';
 
 function formatTime(ts: number): string {
   return new Date(ts).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
@@ -55,8 +54,7 @@ export function Mailbox() {
   // on open while the panel still shows what was new this time.
   const [unreadAtOpen, setUnreadAtOpen] = useState<Set<string> | null>(null);
 
-  // The single-device "Admin" test identity isn't a real person with an inbox.
-  if (!activePlayerId || activePlayerId === ADMIN_ID) return null;
+  if (!activePlayerId) return null;
 
   const unreadCount = messages.filter((m) => m.recipientId === activePlayerId && !m.read).length;
 

@@ -27,5 +27,3 @@ export function fmtEuro(n: number): string {
 export function fmtOdds(n: number): string {
   return n.toFixed(2);
 }
-
-export const ADMIN_ID = 'admin';

@@ -13,7 +13,7 @@ import {
 } from '../lib/bracket';
 import { poolOdds, updateRating, winProbability } from '../lib/odds';
 import { buildDefaultPlayers } from './seed';
-import { ADMIN_ID, fmtCoins, playerName } from '../lib/format';
+import { fmtCoins, playerName } from '../lib/format';
 import { createMessage, WELCOME_TEXT } from '../lib/messages';
 
 interface State {
@@ -34,9 +34,6 @@ interface State {
 
   setActivePlayer: (id: string | null) => void;
   updatePlayer: (id: string, patch: Partial<Pick<Player, 'name' | 'initialOdds'>>) => void;
-  /** Add a new guest (bets only, never plays) and return their new id. Only for single-device mode -
-   *  a multi-device room writes guests straight to Firebase instead, see lib/roomSync.ts. */
-  addGuest: (name: string) => string;
   /** Mark every message addressed to this identity as read - called once the inbox is opened. */
   markMessagesRead: (recipientId: string) => void;
   setSeedSlot: (index: number, playerId: string) => void;
@@ -93,7 +90,7 @@ export function freshSyncedState(): SyncedState {
 }
 
 function freshState() {
-  return { ...freshSyncedState(), activePlayerId: ADMIN_ID };
+  return { ...freshSyncedState(), activePlayerId: null };
 }
 
 function applyRatingUpdate(players: Player[], winnerId: string, loserId: string): Player[] {
@@ -148,16 +145,6 @@ export const useStore = create<State>()(
         set((state) => ({
           players: state.players.map((p) => (p.id === id ? { ...p, ...patch } : p)),
         })),
-
-      addGuest: (name) => {
-        const id = `guest-${crypto.randomUUID()}`;
-        const trimmed = name.trim() || 'Gast';
-        set((state) => ({
-          guests: [...state.guests, { id, name: trimmed }],
-          messages: [...state.messages, createMessage(id, 'welcome', WELCOME_TEXT)],
-        }));
-        return id;
-      },
 
       markMessagesRead: (recipientId) =>
         set((state) => ({

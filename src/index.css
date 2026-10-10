@@ -1198,37 +1198,3 @@ button.danger {
   color: var(--text);
 }
 
-/* ---------- Guest name prompt overlay ---------- */
-
-.guest-prompt-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 110;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
-  background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  animation: pulse-backdrop-in 0.2s ease both;
-}
-
-.guest-prompt-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow);
-  padding: 20px;
-  width: 100%;
-  max-width: 360px;
-}
-
-.guest-prompt-card h3 {
-  margin: 0 0 6px;
-}
-
-.guest-prompt-card input {
-  width: 100%;
-  margin: 12px 0 4px;
-}

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useAppMode } from '../store/useAppMode';
 import { useStore } from '../store/useStore';
+import { Logo } from './Logo';
 import {
   addGuestToRoom,
   claimPlayerInRoom,
@@ -15,7 +16,6 @@ import type { Player } from '../types';
 type Screen = 'choice' | 'create' | 'join-code' | 'identity';
 
 export function RoomGate() {
-  const setMode = useAppMode((s) => s.setMode);
   const setRoomCode = useAppMode((s) => s.setRoomCode);
   const setIsRoomAdmin = useAppMode((s) => s.setIsRoomAdmin);
   const setActivePlayer = useStore((s) => s.setActivePlayer);
@@ -136,6 +136,14 @@ export function RoomGate() {
   return (
     <div className="app centered">
       <div className="card">
+        {screen === 'choice' && (
+          <div className="entry-brand">
+            <Logo size={56} />
+            <span className="brand-text entry-brand-text">
+              ALRAM<span className="brand-accent">BET</span>
+            </span>
+          </div>
+        )}
         <h2>Mehrgeräte-Raum</h2>
 
         {screen === 'choice' && (
@@ -147,9 +155,6 @@ export function RoomGate() {
               </button>
               <button className="button-secondary" disabled={busy} onClick={() => setScreen('join-code')}>
                 Raum beitreten
-              </button>
-              <button className="button-secondary" onClick={() => setMode(null)}>
-                Zurück
               </button>
             </div>
           </>

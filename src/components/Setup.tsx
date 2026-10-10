@@ -62,17 +62,16 @@ export function Setup({ isAdmin }: { isAdmin: boolean }) {
   const phase = useStore((s) => s.phase);
   const updatePlayer = useStore((s) => s.updatePlayer);
   const resetTournament = useStore((s) => s.resetTournament);
-  const setMode = useAppMode((s) => s.setMode);
+  const leaveRoom = useAppMode((s) => s.leaveRoom);
 
   const editable = phase === 'setup' && isAdmin;
 
   function handleEndTournament() {
     if (!confirm('Wirklich alles beenden und zurücksetzen? Das kann nicht rückgängig gemacht werden.')) return;
     resetTournament();
-    // Back to "Wie willst du testen?" so a fresh test run starts from the very
-    // top - re-picking Einzelgerät/Mehrgeräte-Raum, not just a reset tournament
-    // sitting underneath the mode this device happened to be in already.
-    setMode(null);
+    // Back to the create/join screen so a fresh test run starts from the very top,
+    // not a reset tournament sitting underneath the room this device is still in.
+    leaveRoom();
   }
 
   return (

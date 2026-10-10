@@ -2,7 +2,18 @@ import { useState } from 'react';
 import { useStore } from '../store/useStore';
 import { poolOdds } from '../lib/odds';
 import { fmtCoins, fmtOdds, playerName } from '../lib/format';
-import type { Match } from '../types';
+import type { Match, MatchStage } from '../types';
+
+/**
+ * The real order these rounds get played in, not grouped by bracket side -
+ * winners- and losers-side rounds alternate to match how the tournament
+ * actually runs match by match (a losers-bracket round slots in as soon as
+ * its feeder winners-bracket round is decided, rather than waiting for the
+ * whole winners bracket to finish first). This is what the tournament
+ * director uses to decide which match to call next, so the betting list
+ * follows the same order top to bottom.
+ */
+const STAGE_CALL_ORDER: MatchStage[] = ['wb-r1', 'lb-r1', 'wb-r2', 'lb-r2', 'lb-r3', 'wb-r3', 'lb-r4', 'gf'];
 
 function OddsBox({
   name,
@@ -111,7 +122,9 @@ function MatchRow({ match, bettorId, isAdmin }: { match: Match; bettorId: string
 
 export function Betting({ bettorId, isAdmin }: { bettorId: string | null; isAdmin: boolean }) {
   const matches = useStore((s) => s.matches);
-  const open = matches.filter((m) => (m.status === 'ready' || m.status === 'live') && m.playerAId && m.playerBId);
+  const open = matches
+    .filter((m) => (m.status === 'ready' || m.status === 'live') && m.playerAId && m.playerBId)
+    .sort((a, b) => STAGE_CALL_ORDER.indexOf(a.stage) - STAGE_CALL_ORDER.indexOf(b.stage));
 
   if (!bettorId && !isAdmin) {
     return <p className="hint">Bitte oben einen Spieler auswählen, um Wetten platzieren zu können.</p>;

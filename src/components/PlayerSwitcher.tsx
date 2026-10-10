@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useStore } from '../store/useStore';
 import { useAppMode } from '../store/useAppMode';
+import { usePulseOnChange } from '../hooks/usePulseOnChange';
 import { ADMIN_ID, fmtCoinsShort, playerName } from '../lib/format';
 
 const NEW_GUEST = '__new_guest__';
@@ -61,6 +62,7 @@ export function PlayerSwitcher() {
 
   const isSingleAdmin = activePlayerId === ADMIN_ID;
   const balance = activePlayerId && !isSingleAdmin ? wallets[activePlayerId] ?? 0 : null;
+  const balancePulsing = usePulseOnChange(balance ?? 0);
 
   // In a shared multi-device room your identity was fixed when you joined -
   // no free swapping between people's personal accounts. The room creator
@@ -68,7 +70,9 @@ export function PlayerSwitcher() {
   if (mode === 'multi') {
     return (
       <div className="player-switcher">
-        {balance !== null && <span className="balance-pill">{fmtCoinsShort(balance)}</span>}
+        {balance !== null && (
+          <span className={`balance-pill ${balancePulsing ? 'pulse' : ''}`}>{fmtCoinsShort(balance)}</span>
+        )}
         <span className="identity-label">
           {playerName(players, activePlayerId, guests)}
           {isRoomAdmin && ' 🛠'}
@@ -79,7 +83,9 @@ export function PlayerSwitcher() {
 
   return (
     <div className="player-switcher">
-      {balance !== null && <span className="balance-pill">{fmtCoinsShort(balance)}</span>}
+      {balance !== null && (
+        <span className={`balance-pill ${balancePulsing ? 'pulse' : ''}`}>{fmtCoinsShort(balance)}</span>
+      )}
       <select
         aria-label="Aktive Identität wählen"
         value={activePlayerId ?? ''}

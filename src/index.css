@@ -81,6 +81,33 @@ p { margin: 0 0 10px; }
   padding: 0 12px calc(var(--nav-h) + 24px + env(safe-area-inset-bottom));
 }
 
+/* ---------- Shared motion ---------- */
+
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pop-in {
+  0% { transform: scale(0.5); opacity: 0; }
+  65% { transform: scale(1.15); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes value-pulse {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.12); }
+  100% { transform: scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
 /* ---------- Header ---------- */
 
 header {
@@ -176,6 +203,12 @@ header {
   font-size: 0.78rem;
   white-space: nowrap;
   box-shadow: 0 2px 8px color-mix(in srgb, var(--accent) 35%, transparent);
+  display: inline-block;
+}
+
+.balance-pill.pulse,
+.balance-big.pulse {
+  animation: value-pulse 0.5s ease;
 }
 
 /* ---------- Mailbox ---------- */
@@ -214,6 +247,7 @@ header {
   align-items: center;
   justify-content: center;
   box-shadow: 0 0 0 2px var(--bg);
+  animation: pop-in 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) both;
 }
 
 .mailbox-backdrop {
@@ -359,6 +393,7 @@ header {
   box-shadow: var(--shadow);
   padding: 18px;
   margin-bottom: 14px;
+  animation: fade-in-up 0.3s ease both;
 }
 
 .app.centered {
@@ -396,6 +431,7 @@ header {
   background: var(--surface-2);
   font-weight: 600;
   cursor: pointer;
+  transition: border-color 0.2s ease, background 0.2s ease;
 }
 
 .identity-option input {
@@ -534,6 +570,13 @@ button {
 button:active {
   transform: scale(0.98);
   box-shadow: 0 1px 4px color-mix(in srgb, var(--accent) 30%, transparent);
+}
+
+@media (hover: hover) {
+  button:hover:not(:disabled):not(:active) {
+    transform: translateY(-1px);
+    box-shadow: 0 5px 14px color-mix(in srgb, var(--accent) 35%, transparent);
+  }
 }
 
 button:disabled {
@@ -731,6 +774,7 @@ button.danger {
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow);
+  animation: fade-in-up 0.35s ease both;
 }
 
 .placement-row:nth-child(1) {
@@ -796,6 +840,8 @@ button.danger {
   padding: 10px 12px;
   margin-bottom: 12px;
   box-shadow: var(--shadow);
+  animation: fade-in-up 0.3s ease both;
+  transition: border-color 0.6s ease;
 }
 
 .bracket-match::before {
@@ -807,6 +853,7 @@ button.danger {
   width: 3px;
   border-radius: 3px;
   background: var(--border);
+  transition: background 0.6s ease;
 }
 
 .bracket-match.finished::before {
@@ -936,11 +983,13 @@ button.danger {
   justify-content: center;
   gap: 2px;
   background: var(--surface-2);
+  transition: border-color 0.2s ease, background 0.2s ease, transform 0.15s ease;
 }
 
 .odds-box.selected {
   border-color: var(--accent);
   background: color-mix(in srgb, var(--accent) 14%, transparent);
+  transform: translateY(-2px);
 }
 
 .odds-value {
@@ -996,6 +1045,7 @@ button.danger {
   font-weight: 700;
   margin: 2px 0 16px;
   color: var(--gold);
+  display: inline-block;
 }
 
 .status-won {

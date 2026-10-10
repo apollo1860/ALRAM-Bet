@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useStore } from '../store/useStore';
+import { usePulseOnChange } from '../hooks/usePulseOnChange';
 import { fmtCoins, fmtOdds, playerName } from '../lib/format';
 import { PaymentPulse } from './PaymentPulse';
 
@@ -11,12 +12,13 @@ export function Wallet({ playerId }: { playerId: string | null }) {
   const depositCoins = useStore((s) => s.depositCoins);
   const [amount, setAmount] = useState('');
   const [pulseAmount, setPulseAmount] = useState<number | null>(null);
+  const balance = playerId ? wallets[playerId] ?? 0 : 0;
+  const balancePulsing = usePulseOnChange(balance);
 
   if (!playerId) {
     return <p className="hint">Bitte oben einen Spieler auswählen.</p>;
   }
 
-  const balance = wallets[playerId] ?? 0;
   const myBets = bets.filter((b) => b.bettorId === playerId).sort((a, b) => b.createdAt - a.createdAt);
 
   return (
@@ -24,7 +26,7 @@ export function Wallet({ playerId }: { playerId: string | null }) {
       {pulseAmount !== null && <PaymentPulse amount={pulseAmount} onDone={() => setPulseAmount(null)} />}
       <div className="card">
         <h2>Mein Konto</h2>
-        <p className="balance-big">{fmtCoins(balance)}</p>
+        <p className={`balance-big ${balancePulsing ? 'pulse' : ''}`}>{fmtCoins(balance)}</p>
         <form
           className="deposit-form"
           onSubmit={(e) => {

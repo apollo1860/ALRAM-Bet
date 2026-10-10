@@ -3,7 +3,7 @@ import { db } from '../firebase';
 import { useStore, freshSyncedState } from '../store/useStore';
 import { useSyncStatus } from '../store/useSyncStatus';
 import { createMessage, WELCOME_TEXT } from './messages';
-import type { Guest, Message, Player, SyncedState } from '../types';
+import type { Bet, Guest, Match, Message, Player, SyncedState } from '../types';
 
 const SYNCED_KEYS = [
   'players',
@@ -33,6 +33,49 @@ function pickSynced(state: ReturnType<typeof useStore.getState>): SyncedState {
   };
 }
 
+/** Realtime Database doesn't just drop empty arrays/objects - it drops any individual
+ *  null-valued field too (writing null to a path deletes it), so a match or bet that had a
+ *  field like fairProbA or payout genuinely set to null comes back from Firebase with that
+ *  field missing (undefined) rather than null. A strict `=== null`/`!== null` check elsewhere
+ *  in the app (e.g. stampFairProbs deciding whether a match still needs its odds snapshot)
+ *  would then treat "missing" as "already set" and never fix it again - so every nullable
+ *  field coming out of Firebase gets patched back to an explicit null here, same spirit as
+ *  the top-level empty-container patching below. */
+function normalizeMatch(raw: Partial<Match>): Match {
+  return {
+    id: raw.id!,
+    stage: raw.stage!,
+    slot: raw.slot!,
+    playerAId: raw.playerAId ?? null,
+    playerBId: raw.playerBId ?? null,
+    winnerTo: raw.winnerTo ?? null,
+    loserTo: raw.loserTo ?? null,
+    scoreA: raw.scoreA ?? null,
+    scoreB: raw.scoreB ?? null,
+    winnerId: raw.winnerId ?? null,
+    status: raw.status ?? 'pending',
+    fairProbA: raw.fairProbA ?? null,
+    preMatchRatingA: raw.preMatchRatingA ?? null,
+    preMatchRatingB: raw.preMatchRatingB ?? null,
+    poolA: raw.poolA ?? 0,
+    poolB: raw.poolB ?? 0,
+  };
+}
+
+function normalizeBet(raw: Partial<Bet>): Bet {
+  return {
+    id: raw.id!,
+    matchId: raw.matchId!,
+    bettorId: raw.bettorId!,
+    pickedPlayerId: raw.pickedPlayerId!,
+    amount: raw.amount!,
+    oddsAtPlacement: raw.oddsAtPlacement!,
+    status: raw.status!,
+    payout: raw.payout ?? null,
+    createdAt: raw.createdAt!,
+  };
+}
+
 /** Realtime Database drops empty arrays/objects entirely instead of storing
  *  them as [] / {}, so a freshly-created room's `matches: []` comes back as
  *  `null` on read - patch those back to the empty containers the rest of
@@ -44,10 +87,10 @@ function normalizeSyncedState(raw: Partial<SyncedState> | null): SyncedState {
     guests: raw?.guests ?? [],
     claimedPlayerIds: raw?.claimedPlayerIds ?? [],
     seedSlots: raw?.seedSlots ?? fresh.seedSlots,
-    matches: raw?.matches ?? [],
+    matches: (raw?.matches ?? []).map(normalizeMatch),
     wallets: raw?.wallets ?? fresh.wallets,
     transactions: raw?.transactions ?? [],
-    bets: raw?.bets ?? [],
+    bets: (raw?.bets ?? []).map(normalizeBet),
     messages: raw?.messages ?? [],
     phase: raw?.phase ?? 'setup',
   };

@@ -118,7 +118,10 @@ function markEliminated(players: Player[], loserId: string): Player[] {
  *  alongside each player's rating right before the match, so a later result correction can restore it exactly. */
 function stampFairProbs(players: Player[], matches: Match[]): Match[] {
   return matches.map((m) => {
-    if (m.fairProbA !== null || !m.playerAId || !m.playerBId) return m;
+    // Loose check (not `!== null`): a room synced through Firebase can come back with this
+    // field missing (`undefined`) rather than `null`, since Realtime Database strips any
+    // null-valued field on write - treat both the same as "not stamped yet".
+    if (m.fairProbA != null || !m.playerAId || !m.playerBId) return m;
     const pa = players.find((p) => p.id === m.playerAId);
     const pb = players.find((p) => p.id === m.playerBId);
     if (!pa || !pb) return m;
@@ -237,7 +240,7 @@ export const useStore = create<State>()(
         const { matches: revertedMatches, winnerId, loserId } = reverted;
 
         let updatedPlayers = players;
-        if (original.preMatchRatingA !== null && original.preMatchRatingB !== null) {
+        if (original.preMatchRatingA != null && original.preMatchRatingB != null) {
           updatedPlayers = players.map((p) => {
             if (p.id === original.playerAId) return { ...p, currentRating: original.preMatchRatingA! };
             if (p.id === original.playerBId) return { ...p, currentRating: original.preMatchRatingB! };

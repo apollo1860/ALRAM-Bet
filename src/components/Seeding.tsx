@@ -19,9 +19,10 @@ export function Seeding({ isAdmin }: { isAdmin: boolean }) {
     <div className="card">
       <h2>Bracket-Auslosung</h2>
       <p className="hint">
-        Trag hier die physische Auslosung ein: wer auf Position 1-8 steht. Positionen 1&amp;2, 3&amp;4, 5&amp;6 und
-        7&amp;8 spielen jeweils die erste Runde gegeneinander. Bei weniger als 8 Spielern eine Position auf
-        "Freilos" setzen - der jeweilige Gegner steigt dann automatisch ohne Spiel in die nächste Runde auf.
+        Lose nacheinander aus, wer auf Position 1-8 kommt - jeder Spieler ist nur so lange wählbar, bis er einer
+        Position zugewiesen ist. Positionen 1&amp;2, 3&amp;4, 5&amp;6 und 7&amp;8 spielen jeweils die erste Runde
+        gegeneinander; die letzte Position ist schon als Freilos gesetzt, weil bei 7 Spielern einer ohne Gegner
+        in Runde 2 aufsteigt.
       </p>
       <table className="table stack">
         <thead>
@@ -31,24 +32,30 @@ export function Seeding({ isAdmin }: { isAdmin: boolean }) {
           </tr>
         </thead>
         <tbody>
-          {seedSlots.map((playerId, i) => (
-            <tr key={i}>
-              <td data-label="Position">
-                {i + 1}
-                {i % 2 === 0 && <span className="hint"> ({pairLabels[i / 2]})</span>}
-              </td>
-              <td data-label="Spieler">
-                <select value={playerId ?? ''} onChange={(e) => setSeedSlot(i, e.target.value)}>
-                  {players.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name}
-                    </option>
-                  ))}
-                  <option value={BYE}>Freilos</option>
-                </select>
-              </td>
-            </tr>
-          ))}
+          {seedSlots.map((playerId, i) => {
+            const pickedElsewhere = new Set(seedSlots.filter((id, j) => j !== i && id && id !== BYE));
+            return (
+              <tr key={i}>
+                <td data-label="Position">
+                  {i + 1}
+                  {i % 2 === 0 && <span className="hint"> ({pairLabels[i / 2]})</span>}
+                </td>
+                <td data-label="Spieler">
+                  <select value={playerId} onChange={(e) => setSeedSlot(i, e.target.value)}>
+                    <option value="">– auslosen –</option>
+                    {players
+                      .filter((p) => !pickedElsewhere.has(p.id))
+                      .map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.name}
+                        </option>
+                      ))}
+                    <option value={BYE}>Freilos</option>
+                  </select>
+                </td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
       <button

@@ -65,10 +65,13 @@ function initialWallets(players: Player[]): Record<string, number> {
 
 const BRACKET_SIZE = 8;
 
-/** Default draw order: the real players in seed order, padded with byes to fill the bracket. */
+/** Starting draw: every position empty for the admin to fill in live as the physical draw
+ *  happens, except the trailing bye slot(s) needed to pad out to a full bracket - those are
+ *  always a bye regardless of draw order, so there's no reason to make the admin pick them. */
 function defaultSeedSlots(players: Player[]): string[] {
-  const slots = players.map((p) => p.id);
-  while (slots.length < BRACKET_SIZE) slots.push(BYE);
+  const byesNeeded = BRACKET_SIZE - players.length;
+  const slots = new Array(BRACKET_SIZE).fill('');
+  for (let i = 0; i < byesNeeded; i++) slots[BRACKET_SIZE - 1 - i] = BYE;
   return slots;
 }
 
@@ -160,6 +163,9 @@ export const useStore = create<State>()(
 
       startBracket: () => {
         const { players, seedSlots } = get();
+        if (seedSlots.some((id) => id === '')) {
+          return 'Bitte erst noch jede Position auslosen - keine darf leer bleiben.';
+        }
         const byesNeeded = BRACKET_SIZE - players.length;
         const realEntries = seedSlots.filter((id) => id !== BYE);
         const byeCount = seedSlots.length - realEntries.length;

@@ -728,30 +728,64 @@ button.danger {
   border-bottom: 2px solid var(--border);
 }
 
-.bracket-section-wb {
-  padding: 2px;
+/* The tree grows to the right as rounds progress: winners bracket on top,
+   losers bracket below, grand final in the last column spanning both. A
+   fixed track width (rather than 1fr) keeps every column readable even
+   though they hold wildly different numbers of matches (4 down to 1), and
+   the wrapper scrolls horizontally since the full tree is wider than most
+   screens. */
+.bracket-tree-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin: 0 -4px 22px;
+  padding: 4px;
 }
 
-.bracket-section-wb .bracket-section-title {
-  color: var(--accent);
-  border-bottom-color: var(--accent);
+.bracket-tree {
+  display: grid;
+  grid-template-columns: 76px repeat(6, 196px);
+  grid-template-rows: auto auto;
+  column-gap: 10px;
+  width: max-content;
 }
 
-.bracket-section-lb {
-  background: var(--surface-2);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  padding: 14px 10px 6px;
-}
-
-.bracket-section-lb .bracket-section-title {
+.bracket-row-label {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  font-family: var(--font-display);
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
   color: var(--muted);
-  border-bottom-color: var(--border);
+  background: var(--bg);
+  padding-right: 8px;
 }
 
-.bracket-section-gf .bracket-section-title {
-  color: var(--gold);
-  border-bottom-color: var(--gold);
+.bracket-col {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.bracket-col-title {
+  margin-bottom: 10px;
+}
+
+.bracket-col-matches {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-around;
+  gap: 10px;
+}
+
+.bracket-col-gf .bracket-match {
+  border-color: var(--gold);
+  border-width: 2px;
+  background: linear-gradient(160deg, color-mix(in srgb, var(--gold) 10%, var(--surface)), var(--surface));
 }
 
 .placement-title {
@@ -794,19 +828,12 @@ button.danger {
   font-weight: 600;
 }
 
-.bracket-section-gf .bracket-match {
-  border-color: var(--gold);
-  border-width: 2px;
-  background: linear-gradient(160deg, color-mix(in srgb, var(--gold) 10%, var(--surface)), var(--surface));
-}
-
 .bracket-match {
   position: relative;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   padding: 10px 12px;
-  margin-bottom: 12px;
   box-shadow: var(--shadow);
   animation: fade-in-up 0.3s ease both;
   transition: border-color 0.6s ease;

@@ -91,46 +91,58 @@ function MatchCard({ match, isAdmin }: { match: Match; isAdmin: boolean }) {
 }
 
 /**
- * The real order these rounds get played in, not grouped by bracket side -
- * winners- and losers-side rounds alternate to match how the tournament
- * actually runs match by match (losers-bracket rounds slot in as soon as
- * their feeder winners-bracket round is decided, rather than waiting for
- * the whole winners bracket to finish first).
+ * Fixed position of every stage in the tournament tree: which grid column it
+ * sits in (columns grow to the right as the tournament progresses, so a
+ * finished match's winner always appears one column over in its next slot -
+ * that's the "who would I play if I win" preview) and which track it belongs
+ * to (winners bracket on top, losers bracket below). Derived straight from
+ * the fixed double-elimination wiring in lib/bracket.ts: a stage's column is
+ * simply how many rounds - on its own track and whatever it waits on from the
+ * other track - have to finish before it can be played.
  */
-const PLAY_ORDER: { title: string; icon: string; variant: 'wb' | 'lb' | 'gf'; stage: MatchStage }[] = [
-  { title: 'Runde 1 – Gewinnerseite', icon: '🏆', variant: 'wb', stage: 'wb-r1' },
-  { title: 'Runde 1 – Verliererseite', icon: '🔁', variant: 'lb', stage: 'lb-r1' },
-  { title: 'Halbfinale – Gewinnerseite', icon: '🏆', variant: 'wb', stage: 'wb-r2' },
-  { title: 'Runde 2 – Verliererseite', icon: '🔁', variant: 'lb', stage: 'lb-r2' },
-  { title: 'Halbfinale – Verliererseite', icon: '🔁', variant: 'lb', stage: 'lb-r3' },
-  { title: 'Finale – Gewinnerseite', icon: '🏆', variant: 'wb', stage: 'wb-r3' },
-  { title: 'Finale – Verliererseite', icon: '🔁', variant: 'lb', stage: 'lb-r4' },
-  { title: 'Grand Final', icon: '👑', variant: 'gf', stage: 'gf' },
+const WB_STAGES: { stage: MatchStage; column: number; title: string }[] = [
+  { stage: 'wb-r1', column: 2, title: 'Runde 1' },
+  { stage: 'wb-r2', column: 3, title: 'Halbfinale' },
+  { stage: 'wb-r3', column: 4, title: 'Finale' },
 ];
+const LB_STAGES: { stage: MatchStage; column: number; title: string }[] = [
+  { stage: 'lb-r1', column: 3, title: 'Runde 1' },
+  { stage: 'lb-r2', column: 4, title: 'Runde 2' },
+  { stage: 'lb-r3', column: 5, title: 'Halbfinale' },
+  { stage: 'lb-r4', column: 6, title: 'Finale' },
+];
+const GF_COLUMN = 7;
 
-function BracketSection({
+function BracketColumn({
   title,
-  icon,
-  variant,
+  column,
+  row,
+  rowSpan,
   matches,
   isAdmin,
+  variant,
 }: {
   title: string;
-  icon: string;
-  variant: 'wb' | 'lb' | 'gf';
+  column: number;
+  row: number;
+  rowSpan?: number;
   matches: Match[];
   isAdmin: boolean;
+  variant?: 'gf';
 }) {
   if (matches.length === 0) return null;
   return (
-    <section className={`bracket-section bracket-section-${variant}`}>
-      <h2 className="bracket-section-title">
-        {icon} {title}
-      </h2>
-      {matches.map((m) => (
-        <MatchCard key={m.id} match={m} isAdmin={isAdmin} />
-      ))}
-    </section>
+    <div
+      className={`bracket-col ${variant ? `bracket-col-${variant}` : ''}`}
+      style={{ gridColumn: column, gridRow: rowSpan ? `${row} / span ${rowSpan}` : row }}
+    >
+      <h3 className="bracket-col-title">{title}</h3>
+      <div className="bracket-col-matches">
+        {matches.map((m) => (
+          <MatchCard key={m.id} match={m} isAdmin={isAdmin} />
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -168,16 +180,31 @@ export function Bracket({ isAdmin }: { isAdmin: boolean }) {
 
   return (
     <>
-      {PLAY_ORDER.map((step) => (
-        <BracketSection
-          key={step.stage}
-          title={step.title}
-          icon={step.icon}
-          variant={step.variant}
-          matches={byStage(step.stage)}
-          isAdmin={isAdmin}
-        />
-      ))}
+      <div className="bracket-tree-wrap">
+        <div className="bracket-tree">
+          <div className="bracket-row-label" style={{ gridColumn: 1, gridRow: 1 }}>
+            🏆 Gewinnerseite
+          </div>
+          <div className="bracket-row-label" style={{ gridColumn: 1, gridRow: 2 }}>
+            🔁 Verliererseite
+          </div>
+          {WB_STAGES.map((s) => (
+            <BracketColumn key={s.stage} title={s.title} column={s.column} row={1} matches={byStage(s.stage)} isAdmin={isAdmin} />
+          ))}
+          {LB_STAGES.map((s) => (
+            <BracketColumn key={s.stage} title={s.title} column={s.column} row={2} matches={byStage(s.stage)} isAdmin={isAdmin} />
+          ))}
+          <BracketColumn
+            title="👑 Grand Final"
+            column={GF_COLUMN}
+            row={1}
+            rowSpan={2}
+            matches={byStage('gf')}
+            isAdmin={isAdmin}
+            variant="gf"
+          />
+        </div>
+      </div>
       <PlacementList matches={matches} />
     </>
   );

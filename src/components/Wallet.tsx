@@ -3,6 +3,7 @@ import { useStore } from '../store/useStore';
 import { usePulseOnChange } from '../hooks/usePulseOnChange';
 import { fmtCoins, fmtOdds, playerName } from '../lib/format';
 import { PaymentPulse } from './PaymentPulse';
+import { unlockDepositChime } from '../lib/sound';
 
 export function Wallet({ playerId }: { playerId: string | null }) {
   const players = useStore((s) => s.players);
@@ -31,6 +32,9 @@ export function Wallet({ playerId }: { playerId: string | null }) {
           className="deposit-form"
           onSubmit={(e) => {
             e.preventDefault();
+            // Must happen synchronously in this gesture, not later when the chime actually
+            // plays - iOS Safari only allows unlocking the AudioContext inside a real tap.
+            unlockDepositChime();
             const n = Number(amount);
             if (n > 0) {
               depositCoins(playerId, n);

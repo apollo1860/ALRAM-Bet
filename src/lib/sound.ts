@@ -1,3 +1,41 @@
+type AudioCtxCtor = typeof AudioContext;
+
+function getAudioCtxCtor(): AudioCtxCtor | undefined {
+  return window.AudioContext ?? (window as unknown as { webkitAudioContext?: AudioCtxCtor }).webkitAudioContext;
+}
+
+// Kept alive for the page's lifetime once created, rather than a fresh context per chime -
+// iOS Safari only allows creating/resuming an AudioContext synchronously inside a real user
+// gesture's call stack. The chime itself fires later from a setTimeout (to land on the
+// checkmark animation), well outside that window, so by then it's too late to create one.
+let sharedCtx: AudioContext | null = null;
+
+function getSharedContext(): AudioContext | null {
+  try {
+    if (sharedCtx) return sharedCtx;
+    const AudioCtx = getAudioCtxCtor();
+    if (!AudioCtx) return null;
+    sharedCtx = new AudioCtx();
+    return sharedCtx;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Call this synchronously from inside the actual tap/click/submit handler that starts a
+ * deposit - before any state updates or other async work - so the shared context exists and
+ * is running by the time playDepositChime() fires later. Safe to call on every deposit.
+ */
+export function unlockDepositChime(): void {
+  try {
+    const ctx = getSharedContext();
+    if (ctx?.state === 'suspended') ctx.resume().catch(() => {});
+  } catch {
+    // best-effort, see playDepositChime
+  }
+}
+
 /**
  * A short two-tone confirmation chime, synthesized on the fly via the Web
  * Audio API - same bright "payment confirmed" rhythm as Apple Pay's sound,
@@ -7,9 +45,9 @@
  */
 export function playDepositChime(): void {
   try {
-    const AudioCtx = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-    if (!AudioCtx) return;
-    const ctx = new AudioCtx();
+    const ctx = getSharedContext();
+    if (!ctx) return;
+    if (ctx.state === 'suspended') ctx.resume().catch(() => {});
 
     const tone = (freq: number, start: number, duration: number, peakGain: number) => {
       const osc = ctx.createOscillator();
@@ -28,8 +66,6 @@ export function playDepositChime(): void {
     const now = ctx.currentTime;
     tone(988, now, 0.16, 0.2); // B5
     tone(1318, now + 0.1, 0.22, 0.22); // E6 - a touch brighter and longer, like the second half of a "ding-ding"
-
-    setTimeout(() => ctx.close().catch(() => {}), 600);
   } catch {
     // Web Audio unavailable or blocked - the visual animation already carries the moment on its own
   }

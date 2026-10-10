@@ -41,6 +41,7 @@ function MatchRow({ match, bettorId, isAdmin }: { match: Match; bettorId: string
   const players = useStore((s) => s.players);
   const placeBet = useStore((s) => s.placeBet);
   const lockMatch = useStore((s) => s.lockMatch);
+  const unlockMatch = useStore((s) => s.unlockMatch);
   const [amount, setAmount] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [side, setSide] = useState<'A' | 'B'>('A');
@@ -110,6 +111,13 @@ function MatchRow({ match, bettorId, isAdmin }: { match: Match; bettorId: string
         <div className="admin-lock-row">
           <button className="button-secondary" onClick={() => lockMatch(match.id)}>
             Wetten schließen &amp; Spiel starten
+          </button>
+        </div>
+      )}
+      {isAdmin && match.status === 'live' && (
+        <div className="admin-lock-row">
+          <button className="button-secondary" onClick={() => unlockMatch(match.id)}>
+            Wetten wieder öffnen
           </button>
         </div>
       )}

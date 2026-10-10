@@ -44,6 +44,9 @@ interface State {
    *  (nothing happens) if anything downstream has already moved on, or null on success. */
   correctMatchResult: (matchId: string) => string | null;
   lockMatch: (matchId: string) => void;
+  /** Reverse of lockMatch - reopens betting on a match that was closed before it actually
+   *  started. Safe at any time: a 'live' match never has a result or anything propagated yet. */
+  unlockMatch: (matchId: string) => void;
   depositCoins: (playerId: string, amount: number) => void;
   /** Admin-only: void a deposit that was entered wrong (typo'd amount, wrong person) - reverses the
    *  wallet credit and removes it from the ledger entirely, as if it never happened. Clamps at 0
@@ -282,6 +285,14 @@ export const useStore = create<State>()(
       lockMatch: (matchId) =>
         set((state) => ({
           matches: state.matches.map((m) => (m.id === matchId && m.status === 'ready' ? { ...m, status: 'live' } : m)),
+        })),
+
+      // The reverse of lockMatch - only flips the status flag back, so there's nothing
+      // downstream to undo (no result, no propagation, no wallet booking ever happened for a
+      // 'live' match). Bets placed before the lock simply stay open and betting resumes.
+      unlockMatch: (matchId) =>
+        set((state) => ({
+          matches: state.matches.map((m) => (m.id === matchId && m.status === 'live' ? { ...m, status: 'ready' } : m)),
         })),
 
       depositCoins: (playerId, amount) => {

@@ -90,62 +90,46 @@ function MatchCard({ match, isAdmin }: { match: Match; isAdmin: boolean }) {
   );
 }
 
-function Round({ title, stage, matches, isAdmin }: { title: string; stage: MatchStage; matches: Match[]; isAdmin: boolean }) {
-  if (matches.length === 0) return null;
-  return (
-    <div className={`bracket-round ${stage === 'gf' ? 'bracket-round-gf' : ''}`}>
-      <h3>{title}</h3>
-      {matches.map((m) => (
-        <MatchCard key={m.id} match={m} isAdmin={isAdmin} />
-      ))}
-    </div>
-  );
-}
-
-const ROUND_TITLES: Record<MatchStage, string> = {
-  'wb-r1': 'Runde 1',
-  'wb-r2': 'Halbfinale',
-  'wb-r3': 'Finale',
-  'lb-r1': 'Runde 1',
-  'lb-r2': 'Runde 2',
-  'lb-r3': 'Halbfinale',
-  'lb-r4': 'Finale',
-  gf: 'Grand Final',
-};
-
-const WB_STAGES: MatchStage[] = ['wb-r1', 'wb-r2', 'wb-r3'];
-const LB_STAGES: MatchStage[] = ['lb-r1', 'lb-r2', 'lb-r3', 'lb-r4'];
-const GF_STAGES: MatchStage[] = ['gf'];
+/**
+ * The real order these rounds get played in, not grouped by bracket side -
+ * winners- and losers-side rounds alternate to match how the tournament
+ * actually runs match by match (losers-bracket rounds slot in as soon as
+ * their feeder winners-bracket round is decided, rather than waiting for
+ * the whole winners bracket to finish first).
+ */
+const PLAY_ORDER: { title: string; icon: string; variant: 'wb' | 'lb' | 'gf'; stage: MatchStage }[] = [
+  { title: 'Runde 1 – Gewinnerseite', icon: '🏆', variant: 'wb', stage: 'wb-r1' },
+  { title: 'Runde 1 – Verliererseite', icon: '🔁', variant: 'lb', stage: 'lb-r1' },
+  { title: 'Halbfinale – Gewinnerseite', icon: '🏆', variant: 'wb', stage: 'wb-r2' },
+  { title: 'Runde 2 – Verliererseite', icon: '🔁', variant: 'lb', stage: 'lb-r2' },
+  { title: 'Halbfinale – Verliererseite', icon: '🔁', variant: 'lb', stage: 'lb-r3' },
+  { title: 'Finale – Gewinnerseite', icon: '🏆', variant: 'wb', stage: 'wb-r3' },
+  { title: 'Finale – Verliererseite', icon: '🔁', variant: 'lb', stage: 'lb-r4' },
+  { title: 'Grand Final', icon: '👑', variant: 'gf', stage: 'gf' },
+];
 
 function BracketSection({
   title,
   icon,
   variant,
-  stages,
-  byStage,
+  matches,
   isAdmin,
 }: {
   title: string;
   icon: string;
   variant: 'wb' | 'lb' | 'gf';
-  stages: MatchStage[];
-  byStage: (stage: MatchStage) => Match[];
+  matches: Match[];
   isAdmin: boolean;
 }) {
-  const rounds = stages.map((stage) => ({ stage, matches: byStage(stage) })).filter((r) => r.matches.length > 0);
-  if (rounds.length === 0) return null;
+  if (matches.length === 0) return null;
   return (
     <section className={`bracket-section bracket-section-${variant}`}>
       <h2 className="bracket-section-title">
         {icon} {title}
       </h2>
-      <div className="bracket-scroll">
-        <div className="bracket">
-          {rounds.map(({ stage, matches }) => (
-            <Round key={stage} title={ROUND_TITLES[stage]} stage={stage} matches={matches} isAdmin={isAdmin} />
-          ))}
-        </div>
-      </div>
+      {matches.map((m) => (
+        <MatchCard key={m.id} match={m} isAdmin={isAdmin} />
+      ))}
     </section>
   );
 }
@@ -184,9 +168,16 @@ export function Bracket({ isAdmin }: { isAdmin: boolean }) {
 
   return (
     <>
-      <BracketSection title="Gewinner-Bracket" icon="🏆" variant="wb" stages={WB_STAGES} byStage={byStage} isAdmin={isAdmin} />
-      <BracketSection title="Verlierer-Bracket" icon="🔁" variant="lb" stages={LB_STAGES} byStage={byStage} isAdmin={isAdmin} />
-      <BracketSection title="Grand Final" icon="👑" variant="gf" stages={GF_STAGES} byStage={byStage} isAdmin={isAdmin} />
+      {PLAY_ORDER.map((step) => (
+        <BracketSection
+          key={step.stage}
+          title={step.title}
+          icon={step.icon}
+          variant={step.variant}
+          matches={byStage(step.stage)}
+          isAdmin={isAdmin}
+        />
+      ))}
       <PlacementList matches={matches} />
     </>
   );

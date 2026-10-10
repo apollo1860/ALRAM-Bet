@@ -794,42 +794,10 @@ button.danger {
   font-weight: 600;
 }
 
-.bracket-scroll {
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  margin: 0 -12px;
-  padding: 4px 12px 8px;
-}
-
-/* Inside the shaded losers-bracket zone, stay within its own box instead of
-   bleeding edge-to-edge like the page-level sections do. */
-.bracket-section-lb .bracket-scroll {
-  margin: 0;
-  padding: 4px 0 8px;
-}
-
-.bracket {
-  display: flex;
-  gap: 14px;
-}
-
-.bracket-round {
-  min-width: 190px;
-}
-
-.bracket-round h3 {
-  padding-left: 2px;
-}
-
-.bracket-round-gf .bracket-match {
+.bracket-section-gf .bracket-match {
   border-color: var(--gold);
   border-width: 2px;
   background: linear-gradient(160deg, color-mix(in srgb, var(--gold) 10%, var(--surface)), var(--surface));
-}
-
-.bracket-round-gf h3 {
-  color: var(--gold);
-  font-size: 1rem;
 }
 
 .bracket-match {
